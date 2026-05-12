@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '~/'
-      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -15,6 +13,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Show repo structure (debug)
+        run: |
+          pwd
+          ls -la
+          echo "---"
+          find . -name "*.py" -not -path "./.git/*" | head -20
 
       - name: Setup SSH key
         run: |
@@ -26,6 +31,14 @@ jobs:
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }}" \
-            ./dags/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.gitignore' \
+            --exclude='README*' \
+            --exclude='*.md' \
+            --exclude='.env*' \
+            --exclude='__pycache__/' \
+            --exclude='*.pyc' \
+            -e "ssh -i ~/.ssh/id_ed25739 -p ${{ secrets.SSH_PORT }}" \
+            ./ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_PATH }}/
