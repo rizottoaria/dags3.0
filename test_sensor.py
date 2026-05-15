@@ -88,7 +88,7 @@ with DAG(
 
     wait_for_new_files = S3NewFilesSensor(
         task_id="wait_for_new_files",
-        bucket_name="my-bucket",
+        bucket_name="dev",
         prefix="",
         aws_conn_id="s3_hello",
         postgres_conn_id="postgres_default",
