@@ -1,10 +1,17 @@
+import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.sensors.base import BaseSensorOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+
+
+default_args = {
+    "owner": "oksana",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
 
 
 class S3NewFilesSensor(BaseSensorOperator):
@@ -69,18 +76,11 @@ def insert_files(**context):
         cur.executemany(sql, [(name,) for name in new_files])
         conn.commit()
 
-
-default_args = {
-    "owner": "oksana",
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
-}
-
 with DAG(
     dag_id="s3_to_postgres_files",
     default_args=default_args,
-    start_date=days_ago(1),
-    schedule_interval="*/5 * * * *",
+    start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
+    schedule="*/5 * * * *",
     catchup=False,
     max_active_runs=1,
     tags=["s3", "postgres", "sensor"],
