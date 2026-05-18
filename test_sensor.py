@@ -25,7 +25,7 @@ class S3NewFilesSensor(BaseSensorOperator):
         self,
         bucket_name: str,
         prefix: str = "",
-        aws_conn_id: str = aws_s3,
+        aws_conn_id: str = s3_hello,
         postgres_conn_id: str = "postgres_default",
         table: str = "files",
         **kwargs,
