@@ -15,7 +15,7 @@ default_args = {
 
 @dag(
     dag_id="currency_rates_etl",
-    start_date=datetime(2026, 5, 1),
+    start_date=datetime(2026, 5, 15),
     schedule="0 5 * * *",
     catchup=False,
     default_args=default_args,
