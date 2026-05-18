@@ -51,7 +51,7 @@ def currency_rates_etl():
         filename = os.path.basename(file_path)
 
         # Используем S3Hook
-        hook = S3Hook(aws_conn_id='minios3_conn')
+        hook = S3Hook(aws_conn_id='aws_s3')
         hook.load_file(
             filename=file_path,
             key=filename,
