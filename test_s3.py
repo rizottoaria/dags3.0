@@ -55,7 +55,7 @@ def currency_rates_etl():
         hook.load_file(
             filename=file_path,
             key=filename,
-            bucket_name='prod',
+            bucket_name='dev',
             replace=True,
         )
 
