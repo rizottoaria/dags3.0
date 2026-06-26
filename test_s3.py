@@ -96,14 +96,13 @@ def currency_rates_etl():
         import boto3
         from pyiceberg.schema import Schema
         from pyiceberg.types import (
-            NestedField, DateType, StringType, DoubleType, TimestampType
+            NestedField, DateType, StringType, DoubleType, TimestamptzType
         )
         from pyiceberg.partitioning import PartitionSpec, PartitionField
         from pyiceberg.transforms import DayTransform
 
         access_key, secret_key = _get_creds()
 
-        # Читаем файл из MinIO
         s3 = boto3.client(
             "s3",
             endpoint_url="http://" + MINIO_IP + ":9000",
@@ -114,15 +113,12 @@ def currency_rates_etl():
         arrow_table = pq.read_table(buf)
         print("Read " + str(len(arrow_table)) + " rows from " + filename)
 
-        # Нормализуем update_at — убираем timezone
-        ts_naive = pc.cast(
-            pc.cast(arrow_table.column("update_at"), pa.timestamp("us", tz="UTC")),
-            pa.timestamp("us")
-        )
+        # update_at → timestamp с UTC timezone (timestamptz)
+        ts_utc = pc.cast(arrow_table.column("update_at"), pa.timestamp("us", tz="UTC"))
         arrow_table = arrow_table.set_column(
-            arrow_table.schema.get_field_index("update_at"), "update_at", ts_naive)
+            arrow_table.schema.get_field_index("update_at"), "update_at", ts_utc)
 
-        # Нормализуем business_date → date32
+        # business_date → date32
         date_ints = arrow_table.column("business_date").cast(pa.int32()).to_pylist()
         EPOCH = dt_date(1970, 1, 1)
         dates = [EPOCH + timedelta(days=d) if d is not None else None for d in date_ints]
@@ -136,17 +132,16 @@ def currency_rates_etl():
 
         try:
             catalog.create_namespace("raw")
-            print("Namespace raw created")
         except Exception:
             pass
 
         table_id = "raw.currency_rates"
         iceberg_schema = Schema(
-            NestedField(1, "business_date",   DateType(),      required=False),
-            NestedField(2, "base_currency",   StringType(),    required=False),
-            NestedField(3, "target_currency", StringType(),    required=False),
-            NestedField(4, "rate",            DoubleType(),    required=False),
-            NestedField(5, "update_at",       TimestampType(), required=False),
+            NestedField(1, "business_date",   DateType(),       required=False),
+            NestedField(2, "base_currency",   StringType(),     required=False),
+            NestedField(3, "target_currency", StringType(),     required=False),
+            NestedField(4, "rate",            DoubleType(),     required=False),
+            NestedField(5, "update_at",       TimestamptzType(), required=False),
         )
         partition_spec = PartitionSpec(
             PartitionField(
@@ -162,8 +157,11 @@ def currency_rates_etl():
                 arrow_table,
                 join_cols=["business_date", "base_currency", "target_currency"],
             )
+            print("Upsert done!")
         except Exception as e:
-            print("Table not found (" + str(e) + "), creating...")
+            if "AlreadyExists" in str(e) or "already exists" in str(e).lower():
+                raise
+            print("Creating table: " + str(e))
             table = catalog.create_table(
                 table_id,
                 schema=iceberg_schema,
