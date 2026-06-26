@@ -16,22 +16,22 @@ SODA_CONTAINER  = "soda"
 INGEST_SCRIPT   = "/tmp/ingest_currency_rates.py"
 AWS_CONN_ID     = "s3_hello"
 
-INGEST_SCRIPT_BODY = r"""
-#!/usr/bin/env python3
+INGEST_SCRIPT_BODY = '''
 import io, os, boto3, pyarrow.parquet as pq, pyarrow as pa, pyarrow.compute as pc
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType, TimestampType
 from datetime import date as dt_date, timedelta
 
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT",  "http://host.docker.internal:9000")
-MINIO_ACCESS = os.getenv("MINIO_ACCESS_KEY")
-MINIO_SECRET = os.getenv("MINIO_SECRET_KEY")
-if not MINIO_ACCESS or not MINIO_SECRET:
-    raise ValueError("MINIO_ACCESS_KEY и MINIO_SECRET_KEY должны быть переданы через -e")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://host.docker.internal:9000")
+MINIO_ACCESS   = os.getenv("MINIO_ACCESS_KEY")
+MINIO_SECRET   = os.getenv("MINIO_SECRET_KEY")
 MINIO_BUCKET   = "dev"
 FILE_PREFIX    = "currency_rates_"
 TARGET_TABLE   = "lakehouse.raw.currency_rates"
+
+if not MINIO_ACCESS or not MINIO_SECRET:
+    raise ValueError("MINIO_ACCESS_KEY и MINIO_SECRET_KEY должны быть переданы через -e")
 
 spark = (
     SparkSession.builder.appName("currency-rates-ingest")
@@ -49,7 +49,7 @@ spark = (
     .getOrCreate()
 )
 spark.sparkContext.setLogLevel("WARN")
-print(f"Spark {spark.version} ready")
+print("Spark " + spark.version + " ready")
 
 s3 = boto3.client("s3", endpoint_url=MINIO_ENDPOINT,
     aws_access_key_id=MINIO_ACCESS, aws_secret_access_key=MINIO_SECRET)
@@ -60,7 +60,7 @@ keys = [
     for obj in page.get("Contents", [])
     if obj["Key"].endswith(".parquet")
 ]
-print(f"Found {len(keys)} files")
+print("Found " + str(len(keys)) + " files")
 
 tables = []
 for k in keys:
@@ -68,7 +68,7 @@ for k in keys:
     tables.append(pq.read_table(buf))
 
 arrow_table = pa.concat_tables(tables, promote_options="default")
-print(f"Total rows: {len(arrow_table):,}")
+print("Total rows: " + str(len(arrow_table)))
 
 ts_col   = arrow_table.column("update_at")
 ts_utc   = pc.cast(ts_col, pa.timestamp("us", tz="UTC"))
@@ -95,7 +95,7 @@ schema = StructType([
 
 df = spark.createDataFrame(rows, schema=schema)
 df = df.dropDuplicates(["business_date", "base_currency", "target_currency"])
-print(f"After dedup: {df.count():,}")
+print("After dedup: " + str(df.count()))
 
 spark.sql("CREATE NAMESPACE IF NOT EXISTS lakehouse.raw")
 table_exists = spark._jsparkSession.catalog().tableExists("lakehouse.raw.currency_rates")
@@ -111,20 +111,23 @@ if not table_exists:
 else:
     print("Merging...")
     df.createOrReplaceTempView("incoming")
-    spark.sql(f"""MERGE INTO {TARGET_TABLE} t USING incoming s
-ON t.business_date = s.business_date
-AND t.base_currency = s.base_currency
-AND t.target_currency = s.target_currency
-WHEN MATCHED AND t.rate != s.rate
-THEN UPDATE SET t.rate = s.rate, t.update_at = s.update_at
-WHEN NOT MATCHED THEN INSERT *""")
+    merge_sql = (
+        "MERGE INTO " + TARGET_TABLE + " t USING incoming s "
+        "ON t.business_date = s.business_date "
+        "AND t.base_currency = s.base_currency "
+        "AND t.target_currency = s.target_currency "
+        "WHEN MATCHED AND t.rate != s.rate "
+        "THEN UPDATE SET t.rate = s.rate, t.update_at = s.update_at "
+        "WHEN NOT MATCHED THEN INSERT *"
+    )
+    spark.sql(merge_sql)
     print("Merged!")
 
-spark.sql(f"SELECT COUNT(*) as total FROM {TARGET_TABLE}").show()
-spark.sql(f"SELECT business_date, COUNT(*) as pairs FROM {TARGET_TABLE} GROUP BY 1 ORDER BY 1 DESC LIMIT 5").show()
+spark.sql("SELECT COUNT(*) as total FROM " + TARGET_TABLE).show()
+spark.sql("SELECT business_date, COUNT(*) as pairs FROM " + TARGET_TABLE + " GROUP BY 1 ORDER BY 1 DESC LIMIT 5").show()
 print("Done.")
 spark.stop()
-"""
+'''
 
 default_args = {"owner": "rizottoaria"}
 
@@ -142,7 +145,7 @@ def currency_rates_etl():
     @task
     def fetch_rates() -> dict:
         api_key = Variable.get("exchangerate_key")
-        url = f"https://v6.exchangerate-api.com/v6/{api_key}/latest/{BASE}"
+        url = "https://v6.exchangerate-api.com/v6/" + api_key + "/latest/" + BASE
         response = requests.get(url, timeout=15)
         response.raise_for_status()
         return response.json()
@@ -158,9 +161,9 @@ def currency_rates_etl():
         df["update_at"] = datetime.now(timezone.utc)
         df = df[["business_date", "base_currency", "target_currency", "rate", "update_at"]]
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        file_path = f"{OUTPUT_DIR}/currency_rates_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.parquet"
+        file_path = OUTPUT_DIR + "/currency_rates_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + ".parquet"
         df.to_parquet(file_path, index=False, engine="pyarrow", compression="snappy")
-        print(f"{len(df)} строк в {file_path}")
+        print(str(len(df)) + " строк в " + file_path)
         return file_path
 
     @task
@@ -173,8 +176,8 @@ def currency_rates_etl():
             bucket_name="dev",
             replace=True,
         )
-        print(f"Загружено в s3://dev/{filename}")
-        return f"s3://dev/{filename}"
+        print("Загружено в s3://dev/" + filename)
+        return "s3://dev/" + filename
 
     @task
     def get_minio_creds() -> dict:
@@ -186,22 +189,22 @@ def currency_rates_etl():
     def copy_ingest_script() -> None:
         result = subprocess.run(
             ["docker", "exec", "-i", SPARK_CONTAINER,
-             "sh", "-c", f"cat > {INGEST_SCRIPT}"],
+             "sh", "-c", "cat > " + INGEST_SCRIPT],
             input=INGEST_SCRIPT_BODY,
             text=True,
             capture_output=True,
         )
         if result.returncode != 0:
-            raise Exception(f"Failed to copy script: {result.stderr}")
-        print(f"Script written to {SPARK_CONTAINER}:{INGEST_SCRIPT}")
+            raise Exception("Failed to copy script: " + result.stderr)
+        print("Script written to " + SPARK_CONTAINER + ":" + INGEST_SCRIPT)
 
     @task
     def spark_ingest_to_iceberg(creds: dict) -> None:
         result = subprocess.run(
             [
                 "docker", "exec",
-                "-e", f"MINIO_ACCESS_KEY={creds['access_key']}",
-                "-e", f"MINIO_SECRET_KEY={creds['secret_key']}",
+                "-e", "MINIO_ACCESS_KEY=" + creds["access_key"],
+                "-e", "MINIO_SECRET_KEY=" + creds["secret_key"],
                 SPARK_CONTAINER,
                 "/opt/spark/bin/spark-submit",
                 "--master", "spark://spark-master:7077",
@@ -216,35 +219,35 @@ def currency_rates_etl():
         print(result.stdout[-3000:] if result.stdout else "")
         print(result.stderr[-3000:] if result.stderr else "")
         if result.returncode != 0:
-            raise Exception(f"spark-submit failed with code {result.returncode}")
+            raise Exception("spark-submit failed with code " + str(result.returncode))
 
     @task
     def refresh_soda_view(creds: dict) -> None:
-        init_script = f"""
-import duckdb
-con = duckdb.connect("/app/lakehouse.duckdb")
-con.execute("INSTALL httpfs; LOAD httpfs;")
-con.execute(\"\"\"
-    CREATE OR REPLACE PERSISTENT SECRET minio_secret (
-        TYPE S3,
-        KEY_ID '{creds["access_key"]}',
-        SECRET '{creds["secret_key"]}',
-        REGION 'us-east-1',
-        ENDPOINT '172.20.0.1:9000',
-        URL_STYLE 'path',
-        USE_SSL false
-    )
-\"\"\")
-con.execute(\"\"\"
-    CREATE OR REPLACE VIEW currency_rates AS
-    SELECT * FROM read_parquet(
-        's3://dev/iceberg-warehouse/raw/currency_rates/data/**/*.parquet',
-        hive_partitioning=true
-    )
-\"\"\")
-print("View updated:", con.execute("SELECT COUNT(*) FROM currency_rates").fetchone())
-con.close()
-"""
+        init_script = (
+            "import duckdb\n"
+            "con = duckdb.connect('/app/lakehouse.duckdb')\n"
+            "con.execute('INSTALL httpfs; LOAD httpfs;')\n"
+            "con.execute(\"\"\"\n"
+            "    CREATE OR REPLACE PERSISTENT SECRET minio_secret (\n"
+            "        TYPE S3,\n"
+            "        KEY_ID '" + creds["access_key"] + "',\n"
+            "        SECRET '" + creds["secret_key"] + "',\n"
+            "        REGION 'us-east-1',\n"
+            "        ENDPOINT '172.20.0.1:9000',\n"
+            "        URL_STYLE 'path',\n"
+            "        USE_SSL false\n"
+            "    )\n"
+            "\"\"\")\n"
+            "con.execute(\"\"\"\n"
+            "    CREATE OR REPLACE VIEW currency_rates AS\n"
+            "    SELECT * FROM read_parquet(\n"
+            "        's3://dev/iceberg-warehouse/raw/currency_rates/data/**/*.parquet',\n"
+            "        hive_partitioning=true\n"
+            "    )\n"
+            "\"\"\")\n"
+            "print('View updated:', con.execute('SELECT COUNT(*) FROM currency_rates').fetchone())\n"
+            "con.close()\n"
+        )
         subprocess.run(
             ["docker", "exec", "-i", SODA_CONTAINER,
              "sh", "-c", "cat > /app/init_duckdb.py"],
@@ -256,20 +259,19 @@ con.close()
         )
         print(result.stdout)
         if result.returncode != 0:
-            raise Exception(f"DuckDB refresh failed: {result.stderr}")
+            raise Exception("DuckDB refresh failed: " + result.stderr)
 
     soda_scan = BashOperator(
         task_id="soda_dq_scan",
-        bash_command=f"""
-            docker exec {SODA_CONTAINER} \
-              soda scan \
-              -d trino_lakehouse \
-              -c /app/configuration.yml \
-              /app/checks/currency_rates.yml
-        """,
+        bash_command=(
+            "docker exec " + SODA_CONTAINER +
+            " soda scan"
+            " -d trino_lakehouse"
+            " -c /app/configuration.yml"
+            " /app/checks/currency_rates.yml"
+        ),
     )
 
-    # ── Pipeline ──────────────────────────────────────────────────────────────
     creds = get_minio_creds()
     s3_path = upload_to_s3(save_to_parquet(fetch_rates()))
     s3_path >> copy_ingest_script() >> spark_ingest_to_iceberg(creds) >> refresh_soda_view(creds) >> soda_scan
