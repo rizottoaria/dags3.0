@@ -111,15 +111,13 @@ if not table_exists:
 else:
     print("Merging...")
     df.createOrReplaceTempView("incoming")
-    spark.sql(f"""
-        MERGE INTO {TARGET_TABLE} t USING incoming s
-        ON  t.business_date   = s.business_date
-        AND t.base_currency   = s.base_currency
-        AND t.target_currency = s.target_currency
-        WHEN MATCHED AND t.rate != s.rate
-            THEN UPDATE SET t.rate = s.rate, t.update_at = s.update_at
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+    spark.sql(f"""MERGE INTO {TARGET_TABLE} t USING incoming s
+ON t.business_date = s.business_date
+AND t.base_currency = s.base_currency
+AND t.target_currency = s.target_currency
+WHEN MATCHED AND t.rate != s.rate
+THEN UPDATE SET t.rate = s.rate, t.update_at = s.update_at
+WHEN NOT MATCHED THEN INSERT *""")
     print("Merged!")
 
 spark.sql(f"SELECT COUNT(*) as total FROM {TARGET_TABLE}").show()
