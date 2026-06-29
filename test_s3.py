@@ -19,31 +19,27 @@ FILE_PREFIX       = "currency_rates_"
 MINIO_IP          = "172.20.0.1"
 ICEBERG_REST_URI  = "http://172.20.0.1:8181"
 SODA_CONTAINER    = "soda"
-TG_TOKEN          = "8986559370:AAHlvzQnah8OsrPiyUL2TtPaZw12NRW3UOM"
 TG_CHAT_ID        = "219022108"
 
 
-def send_telegram(message: str) -> None:
-    url = "https://api.telegram.org/bot" + TG_TOKEN + "/sendMessage"
-    requests.post(url, json={"chat_id": TG_CHAT_ID, "text": message}, timeout=10)
-
 
 def on_failure_callback(context):
-    dag_id   = context["dag"].dag_id
-    task_id  = context["task_instance"].task_id
-    run_id   = context["run_id"]
-    exc      = context.get("exception", "unknown error")
-    log_url  = context["task_instance"].log_url
+    tg_token   = Variable.get("tg_bot_token")
+    tg_chat_id = TG_CHAT_ID
+    dag_id  = context["dag"].dag_id
+    task_id = context["task_instance"].task_id
+    exc     = context.get("exception", "unknown error")
     msg = (
         "❌ Airflow DAG failed\n"
         "DAG: " + dag_id + "\n"
         "Task: " + task_id + "\n"
-        "Run: " + run_id + "\n"
-        "Error: " + str(exc)[:200] + "\n"
-        "Logs: " + log_url
+        "Error: " + str(exc)[:200]
     )
-    send_telegram(msg)
-
+    requests.post(
+        "https://api.telegram.org/bot" + tg_token + "/sendMessage",
+        json={"chat_id": tg_chat_id, "text": msg},
+        timeout=10,
+    )
 
 def _get_creds():
     conn = BaseHook.get_connection(AWS_CONN_ID)
