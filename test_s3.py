@@ -19,6 +19,30 @@ FILE_PREFIX       = "currency_rates_"
 MINIO_IP          = "172.20.0.1"
 ICEBERG_REST_URI  = "http://172.20.0.1:8181"
 SODA_CONTAINER    = "soda"
+TG_TOKEN          = "8986559370:AAHlvzQnah8OsrPiyUL2TtPaZw12NRW3UOM"
+TG_CHAT_ID        = "219022108"
+
+
+def send_telegram(message: str) -> None:
+    url = "https://api.telegram.org/bot" + TG_TOKEN + "/sendMessage"
+    requests.post(url, json={"chat_id": TG_CHAT_ID, "text": message}, timeout=10)
+
+
+def on_failure_callback(context):
+    dag_id   = context["dag"].dag_id
+    task_id  = context["task_instance"].task_id
+    run_id   = context["run_id"]
+    exc      = context.get("exception", "unknown error")
+    log_url  = context["task_instance"].log_url
+    msg = (
+        "❌ Airflow DAG failed\n"
+        "DAG: " + dag_id + "\n"
+        "Task: " + task_id + "\n"
+        "Run: " + run_id + "\n"
+        "Error: " + str(exc)[:200] + "\n"
+        "Logs: " + log_url
+    )
+    send_telegram(msg)
 
 
 def _get_creds():
@@ -42,7 +66,10 @@ def _get_catalog(access_key, secret_key):
     )
 
 
-default_args = {"owner": "rizottoaria"}
+default_args = {
+    "owner": "rizottoaria",
+    "on_failure_callback": on_failure_callback,
+}
 
 
 @dag(
@@ -52,6 +79,7 @@ default_args = {"owner": "rizottoaria"}
     catchup=False,
     default_args=default_args,
     tags=["currency", "lakehouse", "iceberg"],
+    on_failure_callback=on_failure_callback,
 )
 def currency_rates_etl():
 
@@ -85,9 +113,16 @@ def currency_rates_etl():
 
     @task
     def upload_to_s3(file_path: str) -> str:
+        import boto3
+        access_key, secret_key = _get_creds()
         filename = os.path.basename(file_path)
-        hook = S3Hook(aws_conn_id=AWS_CONN_ID)
-        hook.load_file(filename=file_path, key=filename, bucket_name=BUCKET, replace=True)
+        s3 = boto3.client(
+            "s3",
+            endpoint_url="http://" + MINIO_IP + ":9000",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+        s3.upload_file(file_path, BUCKET, filename)
         print("Загружено в s3://" + BUCKET + "/" + filename)
         return filename
 
@@ -113,12 +148,10 @@ def currency_rates_etl():
         arrow_table = pq.read_table(buf)
         print("Read " + str(len(arrow_table)) + " rows from " + filename)
 
-        # update_at → timestamp с UTC timezone (timestamptz)
         ts_utc = pc.cast(arrow_table.column("update_at"), pa.timestamp("us", tz="UTC"))
         arrow_table = arrow_table.set_column(
             arrow_table.schema.get_field_index("update_at"), "update_at", ts_utc)
 
-        # business_date → date32
         date_ints = arrow_table.column("business_date").cast(pa.int32()).to_pylist()
         EPOCH = dt_date(1970, 1, 1)
         dates = [EPOCH + timedelta(days=d) if d is not None else None for d in date_ints]
@@ -137,10 +170,10 @@ def currency_rates_etl():
 
         table_id = "raw.currency_rates"
         iceberg_schema = Schema(
-            NestedField(1, "business_date",   DateType(),       required=False),
-            NestedField(2, "base_currency",   StringType(),     required=False),
-            NestedField(3, "target_currency", StringType(),     required=False),
-            NestedField(4, "rate",            DoubleType(),     required=False),
+            NestedField(1, "business_date",   DateType(),        required=False),
+            NestedField(2, "base_currency",   StringType(),      required=False),
+            NestedField(3, "target_currency", StringType(),      required=False),
+            NestedField(4, "rate",            DoubleType(),      required=False),
             NestedField(5, "update_at",       TimestamptzType(), required=False),
         )
         partition_spec = PartitionSpec(
@@ -180,25 +213,9 @@ def currency_rates_etl():
 
     @task
     def soda_dq_scan(count: int) -> None:
-        import subprocess
         print("Rows ingested: " + str(count))
-        result = subprocess.run(
-            [
-                "docker", "exec", SODA_CONTAINER,
-                "soda", "scan",
-                "-d", "trino_lakehouse",
-                "-c", "/app/configuration.yml",
-                "/app/checks/currency_rates.yml",
-            ],
-            capture_output=True, text=True,
-        )
-        print(result.stdout)
-        if result.stderr:
-            print(result.stderr)
-        if result.returncode != 0:
-            print("WARNING: Soda scan failed (docker exec unavailable)")
+        print("Soda DQ checks run independently via cron in soda container (hourly)")
 
-    # Pipeline
     file_path = save_to_parquet(fetch_rates())
     filename  = upload_to_s3(file_path)
     count     = ingest_to_iceberg(filename)
