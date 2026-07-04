@@ -1,26 +1,6 @@
-"""
-DAG: rizottoaria__wiki_changes_to_kafka
-
-Wikimedia EventStreams (recentchange, SSE) -> Kafka topic `wiki-changes`.
-
-Паттерн: НЕ вечный стрим-таск, а батч-реплей своего интервала.
-EventStreams хранит ~7 дней истории и поддерживает ?since=<ISO ts>,
-поэтому каждый запуск читает строго свой data_interval
-(data_interval_start -> data_interval_end) и останавливается,
-когда meta.dt события достигает конца интервала.
-
-Свойства:
-  - идемпотентность: ретрай читает тот же интервал (at-least-once,
-    дедупликация на консьюмере по meta.id)
-  - backfill работает из коробки (в пределах ~7 дней истории стрима)
-  - нет вечных тасков и щелей между запусками
-
-Требования на воркере: pip install kafka-python requests
-"""
-
 import json
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from airflow.sdk import dag, task
 import pendulum
@@ -30,7 +10,7 @@ TOPIC = "wiki-changes"
 STREAM_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
 USER_AGENT = "rizottoaria-kafka-practice/1.0 (rizottoaria@gmail.com)"
 
-WIKI_FILTER: set[str] = set() 
+WIKI_FILTER: set[str] = set()  # пусто = все вики; пример: {"ruwiki", "enwiki"}
 MAX_RECONNECTS = 5
 WALL_CLOCK_DEADLINE_SEC = 180  # предохранитель от зависания
 
@@ -58,7 +38,9 @@ def _iter_sse_data(response):
 
 @dag(
     dag_id="rizottoaria__wiki_changes_to_kafka",
-    schedule="*/5 * * * *",
+    # ВАЖНО: в Airflow 3 cron-строка дает zero-width интервал
+    # (data_interval_start == data_interval_end), поэтому timedelta
+    schedule=timedelta(minutes=5),
     start_date=pendulum.datetime(2026, 7, 1, tz="UTC"),
     catchup=False,  # можно включить: since-механика честно дозальёт пропуски
     max_active_runs=1,
@@ -70,8 +52,11 @@ def wiki_changes_to_kafka():
         import requests
         from kafka import KafkaProducer
 
-        interval_start = data_interval_start
         interval_end = data_interval_end
+        interval_start = data_interval_start
+        if interval_start >= interval_end:
+            # ручной trigger или cron-timetable дают нулевой интервал
+            interval_start = interval_end - timedelta(minutes=5)
         print(f"LOG === interval {interval_start} -> {interval_end}")
 
         producer = KafkaProducer(
