@@ -30,7 +30,7 @@ def on_failure_callback(context):
     task_id = context["task_instance"].task_id
     exc     = context.get("exception", "unknown error")
     msg = (
-        "❌ Airflow DAG failed\n"
+        "Airflow DAG failed\n"
         "DAG: " + dag_id + "\n"
         "Task: " + task_id + "\n"
         "Error: " + str(exc)[:200]
