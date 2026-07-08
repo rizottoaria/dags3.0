@@ -1,4 +1,3 @@
-# petbuddy_common.py
 import json
 
 BROKER     = "185.182.9.18:9092"
@@ -21,7 +20,7 @@ def drain(batch: int, max_loops: int) -> str:
     from airflow.sdk import Variable
     from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-    last_id = Variable.get(CURSOR_VAR, default_var="")
+    last_id = Variable.get(CURSOR_VAR, default="")
     producer = Producer({
         "bootstrap.servers": BROKER, "linger.ms": 100,
         "compression.type": "lz4", "enable.idempotence": True,
