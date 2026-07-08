@@ -64,7 +64,7 @@ def pipeline():
                         SELECT * FROM events
                         WHERE "receivedAt" >= %s
                         ORDER BY "receivedAt"
-                        LIMIT %s
+                        LIMIT 3
                         ''',
                         (last_ts, BATCH),
                     )
