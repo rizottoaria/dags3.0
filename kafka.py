@@ -61,10 +61,7 @@ def pipeline():
                     # camelCase-колонки строго в двойных кавычках!
                     cur.execute(
                         '''
-                        SELECT * FROM events
-                        WHERE "receivedAt" >= %s
-                        ORDER BY "receivedAt"
-                        LIMIT 3
+                        SELECT * FROM events ORDER BY id LIMIT 3
                         ''',
                         (last_ts, BATCH),
                     )
