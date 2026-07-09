@@ -1,3 +1,4 @@
+# petbuddy_common.py
 import json
 
 BROKER     = "185.182.9.18:9092"
@@ -13,54 +14,68 @@ RENAME = {
     "receivedAt": "received_at",
 }
 
-def drain(batch: int, max_loops: int) -> str:
-    """Keyset-пагинация по id, льёт в Kafka, двигает курсор. Возвращает лог-строку."""
+SQL = 'SELECT * FROM events WHERE id > %s ORDER BY id LIMIT %s'
+
+
+def drain(batch: int = 5000, max_loops: int = 20, itersize: int = 500) -> str:
+    """
+    Keyset-пагинация по id (CUID лексикографически монотонен по времени).
+    Тянет всё, что появилось после курсора; если нового нет — молча выходит.
+    Курсор двигается ТОЛЬКО после flush в Kafka → at-least-once.
+    """
     import psycopg2.extras
     from confluent_kafka import Producer
     from airflow.sdk import Variable
     from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-    last_id = Variable.get(CURSOR_VAR, default="")
+    last_id = Variable.get(CURSOR_VAR, default="")   # "" < любой CUID
+
     producer = Producer({
-        "bootstrap.servers": BROKER, "linger.ms": 100,
-        "compression.type": "lz4", "enable.idempotence": True,
+        "bootstrap.servers": BROKER,
+        "linger.ms": 100,
+        "compression.type": "lz4",
+        "enable.idempotence": True,
         "batch.size": 1 << 20,
     })
     to_str = lambda o: str(o)
     norm = lambda r: {RENAME.get(k, k): v for k, v in r.items()}
 
     total = 0
-    hook = PostgresHook(postgres_conn_id=PG_CONN_ID)
-    conn = hook.get_conn()
-    conn.set_session(readonly=True, autocommit=True)
-    with conn.cursor() as c:
-        c.execute("SET statement_timeout = '120s'")
+    conn = PostgresHook(postgres_conn_id=PG_CONN_ID).get_conn()
+    conn.set_session(readonly=True, autocommit=False)   # named cursor требует транзакцию
+
     try:
-        for _ in range(max_loops):
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                if last_id == "":
-                    cur.execute('SELECT * FROM events ORDER BY id LIMIT %s', (batch,))
-                else:
-                    cur.execute(
-                        'SELECT * FROM events WHERE id > %s ORDER BY id LIMIT %s',
-                        (last_id, batch),
+        for loop in range(max_loops):
+            batch_last_id, n = last_id, 0
+
+            # серверный курсор: сервер отдаёт порциями по itersize, а не одним куском
+            with conn.cursor(name=f"drain_{loop}",
+                             cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.itersize = itersize
+                cur.execute(SQL, (last_id, batch))
+                for row in cur:
+                    r = norm(row)
+                    producer.produce(
+                        TOPIC,
+                        key=str(r["id"]).encode(),
+                        value=json.dumps(r, default=to_str).encode(),
                     )
-                rows = cur.fetchall()
-            if not rows:
-                break
-            for row in rows:
-                r = norm(row)
-                producer.produce(
-                    TOPIC, key=str(r["id"]).encode(),
-                    value=json.dumps(r, default=to_str).encode(),
-                )
-            producer.poll(0)
-            producer.flush()
-            last_id = rows[-1]["id"]
-            Variable.set(CURSOR_VAR, last_id)
-            total += len(rows)
-            if len(rows) < batch:
-                break
+                    producer.poll(0)
+                    batch_last_id = r["id"]
+                    n += 1
+            conn.commit()          # закрываем read-only транзакцию порции
+
+            if n == 0:
+                break              # новых событий нет — штатный выход
+
+            producer.flush()                       # 1) гарантируем доставку
+            Variable.set(CURSOR_VAR, batch_last_id)  # 2) только потом двигаем курсор
+            last_id = batch_last_id
+            total += n
+
+            if n < batch:
+                break              # хвост исчерпан
     finally:
         conn.close()
-    return f"produced {total} rows, cursor now {last_id}"
+
+    return f"produced {total} rows, cursor now {last_id or '(empty)'}"
