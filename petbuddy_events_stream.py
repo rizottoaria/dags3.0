@@ -99,7 +99,7 @@ def stream():
         from airflow.sdk import Variable
         from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-        anchor = Variable.get(ANCHOR_VAR, default_var="")
+        anchor = Variable.get(ANCHOR_VAR, default="")
         if anchor:
             print(f"LOG === anchor уже зафиксирован: {anchor}")
             return anchor
@@ -110,7 +110,7 @@ def stream():
                 anchor = cur.fetchone()["m"]
 
         if not anchor:
-            raise RuntimeError("LOG === таблица events пуста, якорь не поставить")
+            raise RuntimeError("LOG === таблица events пуста")
 
         Variable.set(ANCHOR_VAR, anchor)
         Variable.set(STREAM_VAR, anchor)     # стрим пойдёт строго вверх: id > anchor
@@ -124,7 +124,7 @@ def stream():
         from airflow.sdk import Variable
         from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-        cursor_id = Variable.get(STREAM_VAR, default_var=anchor)
+        cursor_id = Variable.get(STREAM_VAR, default=anchor)
         producer = _make_producer()
 
         errors: list = []
