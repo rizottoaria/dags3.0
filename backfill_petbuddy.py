@@ -155,9 +155,9 @@ def backfill():
                             f"errors={errors[:5]} -- курсор НЕ двигаем"
                         )
 
-                    cursor_id = rows[-1]["id"]   # DESC -> последний = минимальный
+                    cursor_id = rows[-1]["id"] 
                     Variable.set(BACKFILL_VAR, cursor_id)
-                    op = "<"                     # дальше только строго меньше
+                    op = "<"             
                     total += len(rows)
                     print(f"LOG === loop={loop} produced={len(rows)} cursor -> {cursor_id}")
 
