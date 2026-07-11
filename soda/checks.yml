@@ -1,0 +1,39 @@
+checks for events:
+  - row_count > 0:
+      name: table is not empty
+
+  - missing_count(id) = 0:
+      name: id is always present
+
+  - missing_count(name) = 0:
+      name: event name is always present
+
+  - missing_count(player_id) = 0:
+      name: player_id is always present
+
+  - missing_count(event_at) = 0:
+      name: event_at is always present
+
+  - missing_count(source) = 0:
+      name: source is always present
+
+  - invalid_count(source) = 0:
+      name: source is always client or server
+      valid values:
+        - client
+        - server
+
+  - failed rows:
+      name: no duplicate ids after merge
+      fail query: |
+        SELECT id, count(*) AS cnt
+        FROM events FINAL
+        GROUP BY id
+        HAVING cnt > 1
+
+  - failed rows:
+      name: event_at is never in the future
+      fail query: |
+        SELECT id
+        FROM events
+        WHERE event_at > now()
