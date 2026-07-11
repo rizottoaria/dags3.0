@@ -151,7 +151,7 @@ def backfill():
                     if remaining or errors:
                         raise RuntimeError(
                             f"LOG === flush не прошёл: in_queue={remaining}, "
-                            f"errors={errors[:5]} -- курсор НЕ двигаем"
+                            f"errors={errors[:5]} -- курсор не двигается"
                         )
 
                     cursor_id = rows[-1]["id"] 
