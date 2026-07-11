@@ -1,0 +1,57 @@
+checks for sessions:
+  - row_count > 0:
+      name: table is not empty
+
+  - missing_count(id) = 0:
+      name: id is always present
+
+  - missing_count(player_id) = 0:
+      name: player_id is always present
+
+  - missing_count(start_at) = 0:
+      name: start_at is always present
+
+  - missing_count(last_activity_at) = 0:
+      name: last_activity_at is always present
+
+  - missing_count(status) = 0:
+      name: status is always present
+
+  - missing_count(created_at) = 0:
+      name: created_at is always present
+
+  - missing_count(updated_at) = 0:
+      name: updated_at is always present
+
+  - invalid_count(status) = 0:
+      name: status is a known enum value
+      valid values:
+        - active
+        - paused
+        - ended
+
+  - min(resume_count) >= 0:
+      name: resume_count is never negative
+
+  - failed rows:
+      name: no duplicate ids after merge
+      fail query: |
+        SELECT id, count(*) AS cnt
+        FROM sessions FINAL
+        GROUP BY id
+        HAVING cnt > 1
+
+  - failed rows:
+      name: end_at is not meaningfully before start_at
+      # допускаем суб-секундный clock skew источника; ловим только реальные инверсии
+      fail query: |
+        SELECT id
+        FROM sessions FINAL
+        WHERE end_at IS NOT NULL AND end_at < start_at - INTERVAL 5 SECOND
+
+  - failed rows:
+      name: updated_at is never in the future
+      fail query: |
+        SELECT id
+        FROM sessions
+        WHERE updated_at > now()
