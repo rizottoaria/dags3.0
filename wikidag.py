@@ -50,7 +50,7 @@ def wiki_changes_to_kafka():
     @task(execution_timeout=pendulum.duration(minutes=4))
     def consume_interval(data_interval_start=None, data_interval_end=None):
         import requests
-        from kafka import KafkaProducer
+        from confluent_kafka import Producer
 
         interval_end = data_interval_end
         interval_start = data_interval_start
@@ -59,13 +59,14 @@ def wiki_changes_to_kafka():
             interval_start = interval_end - timedelta(minutes=5)
         print(f"LOG === interval {interval_start} -> {interval_end}")
 
-        producer = KafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP,
-            value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode(),
-            key_serializer=lambda v: v.encode(),
-            acks="all",
-            linger_ms=100,
-        )
+        producer = Producer({
+            "bootstrap.servers": KAFKA_BOOTSTRAP,
+            "acks": "all",
+            "linger.ms": 100,
+            "enable.idempotence": True,
+            "compression.type": "lz4",
+            "socket.keepalive.enable": True,
+        })
 
         sent = skipped = malformed = 0
         last_dt = interval_start
@@ -113,7 +114,13 @@ def wiki_changes_to_kafka():
                         skipped += 1
                         continue
 
-                    producer.send(TOPIC, key=wiki, value=event)
+                    value_bytes = json.dumps(event, ensure_ascii=False).encode()
+                    try:
+                        producer.produce(TOPIC, key=wiki.encode(), value=value_bytes)
+                    except BufferError:
+                        producer.poll(1)  # разгрузить очередь доставки и повторить
+                        producer.produce(TOPIC, key=wiki.encode(), value=value_bytes)
+                    producer.poll(0)  # обслужить delivery-колбэки
                     sent += 1
 
                 resp.close()
@@ -129,7 +136,6 @@ def wiki_changes_to_kafka():
                 done = True
 
         producer.flush()
-        producer.close()
         print(
             f"LOG === sent={sent} skipped={skipped} malformed={malformed} "
             f"last_dt={last_dt} reconnects={reconnects}"
