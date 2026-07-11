@@ -28,6 +28,10 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Ensure rsync is installed
+        run: |
+          command -v rsync >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq rsync)
+
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
