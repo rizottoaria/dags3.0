@@ -26,8 +26,8 @@ ANCHOR_VAR = "petbuddy_events_anchor_id"
 BACKFILL_VAR = "petbuddy_events_backfill_cursor"
 DONE_VAR = "petbuddy_events_backfill_done"
 
-BATCH = 20_000       # JSONB properties+context тяжёлые, 50k раздувает память
-MAX_LOOPS = 100      # до 2M строк за run -> 11M за ~6 runs
+BATCH = 20_000       
+MAX_LOOPS = 100    
 STMT_TIMEOUT_MS = 120_000
 
 TO_SNAKE = True
@@ -98,20 +98,19 @@ def backfill():
         from airflow.sdk import Variable
         from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-        if Variable.get(DONE_VAR, default_var="") == "1":
+        if Variable.get(DONE_VAR, default="") == "1":
             raise AirflowSkipException("LOG === бэкфилл завершён, skip")
 
-        anchor = Variable.get(ANCHOR_VAR, default_var="")
+        anchor = Variable.get(ANCHOR_VAR, default="")
         if not anchor:
             raise RuntimeError(
                 "LOG === якорь не поставлен. Сначала прогони "
                 "rizottoaria__petbuddy_events_stream хотя бы один раз."
             )
 
-        cursor_id = Variable.get(BACKFILL_VAR, default_var=anchor)
+        cursor_id = Variable.get(BACKFILL_VAR, default=anchor)
 
-        # первый батч в жизни бэкфилла: курсор всё ещё равен якорю ->
-        # включаем саму строку-якорь, иначе она провалится в дыру
+
         op = "<=" if cursor_id == anchor else "<"
         print(f"LOG === старт: anchor={anchor} cursor={cursor_id} op={op}")
 
