@@ -1,0 +1,25 @@
+# Скопируйте этот файл в ~/.dbt/profiles.yml (или оставьте здесь и запускайте
+#   dbt run --profiles-dir .
+# Требуется адаптер: pip install dbt-clickhouse
+#
+# Секреты берутся из переменных окружения, чтобы не хранить пароль в репозитории:
+#   export CH_HOST=185.182.9.18
+#   export CH_USER=<user>
+#   export CH_PASSWORD=<password>
+petbuddy:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      host: "{{ env_var('CH_HOST', '185.182.9.18') }}"
+      port: 8123
+      user: "{{ env_var('CH_USER', 'default') }}"
+      password: "{{ env_var('CH_PASSWORD', '') }}"
+      schema: petbuddy_clean      # целевая база для витрин
+      secure: False               # 8123 = HTTP; для 8443 поставьте True
+      verify: False
+      connect_timeout: 10
+      send_receive_timeout: 300
+      # Разрешаем dbt создавать базу petbuddy_clean при первом запуске
+      custom_settings:
+        allow_experimental_json_type: 1

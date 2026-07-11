@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: dim_players
+    description: "Профиль игрока: активность, атрибуты, LTV."
+    columns:
+      - name: player_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: mart_daily_active_users
+    description: "DAU, новые/вернувшиеся, сессии, выручка и ARPDAU по дням."
+    columns:
+      - name: event_date
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_revenue_events
+    description: "Факт платёжных событий (одна строка = один платёж)."
+    columns:
+      - name: event_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: mart_revenue_daily
+    description: "Выручка по дням и типу с ARPU/ARPPU."
+    columns:
+      - name: event_date
+        data_tests:
+          - not_null
+
+  - name: fct_economy_flows
+    description: "Движение игровых валют (приход/расход), одна строка на валюту события."
+
+  - name: mart_currency_flows_daily
+    description: "Дневные source/sink и net-flow по каждой валюте."
+
+  - name: mart_currency_balance_daily
+    description: "Средние остатки валют у игроков по дням (balanceSnapshot)."

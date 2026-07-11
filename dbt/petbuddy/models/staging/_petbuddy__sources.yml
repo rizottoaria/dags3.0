@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: petbuddy
+    database: petbuddy
+    description: "Сырые события из Kafka (events_queue -> events_mv -> events)."
+    tables:
+      - name: events
+        description: >
+          Поток игровых событий. ReplacingMergeTree(received_at):
+          дубли по ключу (event_date, name, player_id, id) схлопываются
+          по последнему received_at. В staging применяем FINAL.
+        columns:
+          - name: id
+            description: "Уникальный идентификатор события."
+          - name: name
+            description: "Тип события (revenue, resource_top_up, session_start, ...)."
+          - name: player_id
+            description: "Идентификатор игрока."
+          - name: session_id
+            description: "Идентификатор сессии (может быть NULL)."
+          - name: event_at
+            description: "Время события (UTC, DateTime64(3))."
+          - name: source
+            description: "Источник: client / server."
+          - name: properties
+            description: "JSON с полезной нагрузкой события."
+          - name: context
+            description: "JSON с контекстом (часто пустой)."
+          - name: received_at
+            description: "Время приёма (версия для ReplacingMergeTree)."

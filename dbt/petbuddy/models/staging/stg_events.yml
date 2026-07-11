@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg_events
+    description: "Дедуплицированные события с плоскими атрибутами из properties."
+    columns:
+      - name: id
+        description: "Уникальный ID события."
+        data_tests:
+          - not_null
+      - name: event_name
+        data_tests:
+          - not_null
+      - name: player_id
+        data_tests:
+          - not_null
+      - name: event_at
+        data_tests:
+          - not_null
+      - name: event_source
+        data_tests:
+          - accepted_values:
+              values: ['client', 'server']

@@ -1,0 +1,35 @@
+name: 'petbuddy'
+version: '1.0.0'
+config-version: 2
+
+profile: 'petbuddy'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Все модели материализуются в схему (базу) petbuddy_clean,
+# которая задана в profiles.yml (в dbt-clickhouse "schema" == база ClickHouse).
+models:
+  petbuddy:
+    staging:
+      +materialized: view
+      +tags: ["staging"]
+    intermediate:
+      +materialized: ephemeral
+      +tags: ["intermediate"]
+    marts:
+      +materialized: table
+      +tags: ["marts"]
+      core:
+        +tags: ["core"]
+      finance:
+        +tags: ["finance"]

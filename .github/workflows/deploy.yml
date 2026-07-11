@@ -55,6 +55,7 @@ jobs:
             --exclude='.env*' \
             --exclude='__pycache__/' \
             --exclude='*.pyc' \
+            --exclude='dbt/' \
             -e "ssh -i ~/.ssh/id_ed25519 -p $SSH_PORT" \
             ./ \
             "$SSH_USER@$SSH_HOST:$TARGET_PATH/"
