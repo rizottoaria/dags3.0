@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
 
-BROKER = "185.182.9.18:9092"
+BROKER = "kafka:9092"
 TOPIC = "petbuddy.events"
 
 PG_CONN_ID = "opn_souls"

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from airflow.sdk import dag, task
 import pendulum
 
-KAFKA_BOOTSTRAP = "185.182.9.18:9092"
+KAFKA_BOOTSTRAP = "kafka:9092"
 TOPIC = "wiki-changes"
 STREAM_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
 USER_AGENT = "rizottoaria-kafka-practice/1.0 (rizottoaria@gmail.com)"
