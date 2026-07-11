@@ -22,11 +22,23 @@ jobs:
           find . -name "*.py" -not -path "./.git/*" | head -20
 
       - name: Setup SSH key
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          TARGET_PATH: ${{ secrets.TARGET_PATH }}
         run: |
+          # trim accidental whitespace/newlines pasted into secrets, which
+          # otherwise silently break the unquoted rsync destination below
+          echo "SSH_USER=$(printf '%s' "$SSH_USER" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "SSH_HOST=$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "SSH_PORT=$(printf '%s' "$SSH_PORT" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "TARGET_PATH=$(printf '%s' "$TARGET_PATH" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Ensure rsync is installed
         run: |
@@ -43,6 +55,6 @@ jobs:
             --exclude='.env*' \
             --exclude='__pycache__/' \
             --exclude='*.pyc' \
-            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }}" \
+            -e "ssh -i ~/.ssh/id_ed25519 -p $SSH_PORT" \
             ./ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_PATH }}/
+            "$SSH_USER@$SSH_HOST:$TARGET_PATH/"
