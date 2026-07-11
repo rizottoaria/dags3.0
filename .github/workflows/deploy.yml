@@ -39,6 +39,6 @@ jobs:
             --exclude='.env*' \
             --exclude='__pycache__/' \
             --exclude='*.pyc' \
-            -e "ssh -i ~/.ssh/id_ed25739 -p ${{ secrets.SSH_PORT }}" \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }}" \
             ./ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.TARGET_PATH }}/
