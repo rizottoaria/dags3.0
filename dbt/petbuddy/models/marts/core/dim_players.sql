@@ -1,12 +1,33 @@
 {{ config(
     materialized='table',
     order_by='(player_id)',
-    query_settings={'max_threads': 1, 'max_bytes_before_external_group_by': 1000000000}
+    query_settings={
+        'max_threads': 1,
+        'do_not_merge_across_partitions_select_final': 1,
+        'max_bytes_before_external_group_by': 600000000
+    }
 ) }}
 
 -- Одна строка на игрока: профиль, активность и LTV.
+--
+-- ВНИМАНИЕ (память): читаем НАПРЯМУЮ из источника, а не из stg_events.
+-- stg_events делает SELECT * и тянет целиком JSON-колонки properties/context;
+-- на сервере с ~4 ГиБ лимитом ClickHouse это упирается в MEMORY_LIMIT_EXCEEDED.
+-- Здесь берём только нужные суб-колонки properties.* (колоночное чтение JSON-путей
+-- дёшево), uniq вместо uniqExact и partition-local FINAL — так запрос влезает.
 with events as (
-    select * from {{ ref('stg_events') }}
+    select
+        player_id,
+        event_at,
+        toDate(event_at)                                    as event_date,
+        name                                                as event_name,
+        session_id,
+        nullIf(properties.country::String, '')              as country,
+        nullIf(properties.version::String, '')              as app_version,
+        nullIf(properties.abVersion::String, '')            as ab_version,
+        toFloat64OrNull(properties.revenue::String)         as revenue_amount,
+        nullIf(properties.type::String, '')                 as revenue_type
+    from {{ source('petbuddy', 'events') }} final
 )
 
 select
@@ -17,7 +38,7 @@ select
     min(event_date)                                        as first_seen_date,
     max(event_date)                                        as last_seen_date,
     dateDiff('day', min(event_date), max(event_date))      as lifespan_days,
-    uniqExact(event_date)                                  as active_days,
+    uniq(event_date)                                       as active_days,
 
     -- Последние известные атрибуты
     argMax(country, event_at)                              as country,
@@ -26,7 +47,7 @@ select
 
     -- Активность
     count()                                                as total_events,
-    uniqExact(session_id)                                  as total_sessions,
+    uniq(session_id)                                       as total_sessions,
 
     -- Монетизация (LTV)
     round(sumIf(revenue_amount, event_name = 'revenue'), 4)          as ltv,
