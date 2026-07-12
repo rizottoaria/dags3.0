@@ -37,14 +37,13 @@ QUEUES = [
 
 # ---------------------------------------------------------------- helpers
 
-def _lag_and_members(group: str, topic: str):
-    """(lag, members) по группе/топику. lag = sum(high - committed) по партициям.
+def _lag(group: str, topic: str) -> int:
+    """LAG = sum(high watermark - committed) по партициям. Все вызовы с таймаутом.
 
     committed() лишь запрашивает оффсеты у координатора и НЕ вступает в группу
     (нет JoinGroup/poll) -> ребаланс живого консьюмера CH не задевается.
     """
     from confluent_kafka import Consumer, TopicPartition
-    from confluent_kafka.admin import AdminClient
 
     c = Consumer({
         "bootstrap.servers": BROKER,
@@ -59,13 +58,25 @@ def _lag_and_members(group: str, topic: str):
             _, hi = c.get_watermark_offsets(TopicPartition(topic, tp.partition), timeout=10)
             off = tp.offset if (tp.offset is not None and tp.offset >= 0) else 0
             lag += max(0, hi - off)
+        return lag
     finally:
         c.close()
 
-    # активные члены группы
-    info = AdminClient({"bootstrap.servers": BROKER}).describe_consumer_groups([group])[group].result()
-    members = len(info.members)
-    return lag, members
+
+def _members(group: str):
+    """Число активных членов группы; None если describe недоступен/завис.
+
+    describe_consumer_groups иногда висит на медленном координаторе -> строгий
+    таймаут и best-effort: при неудаче решение принимается по динамике lag.
+    """
+    try:
+        from confluent_kafka.admin import AdminClient
+        admin = AdminClient({"bootstrap.servers": BROKER})
+        info = admin.describe_consumer_groups([group])[group].result(timeout=15)
+        return len(info.members)
+    except Exception as e:
+        print(f"LOG === describe_consumer_groups({group}) недоступен: {e!r}")
+        return None
 
 
 def _ch_ddl(sql: str) -> str:
@@ -105,7 +116,8 @@ def watchdog():
             table, group, topic = q["table"], q["group"], q["topic"]
             var = f"watchdog_lag_{group}"
             try:
-                lag, members = _lag_and_members(group, topic)
+                lag = _lag(group, topic)
+                members = _members(group)   # может быть None, если describe завис
                 prev = int(Variable.get(var, default="0"))
                 print(f"LOG === {table}: lag={lag} members={members} prev_lag={prev}")
 
