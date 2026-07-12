@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='(player_id)') }}
+{{ config(
+    materialized='table',
+    order_by='(player_id)',
+    settings={'max_threads': 2, 'max_bytes_before_external_group_by': '2000000000'}
+) }}
 
 -- Одна строка на игрока: профиль, активность и LTV.
 with events as (

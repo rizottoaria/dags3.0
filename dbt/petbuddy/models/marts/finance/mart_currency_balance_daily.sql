@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='(event_date, currency)') }}
+{{ config(
+    materialized='table',
+    order_by='(event_date, currency)',
+    settings={'max_threads': 2, 'max_bytes_before_external_group_by': '2000000000'}
+) }}
 
 -- Средний остаток валют у игроков по дням (из properties.balanceSnapshot).
 -- balanceSnapshot — вложенный объект, поэтому достаём его через JSONExtractRaw.

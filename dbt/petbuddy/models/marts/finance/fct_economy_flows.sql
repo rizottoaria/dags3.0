@@ -3,7 +3,8 @@
     materialized='incremental',
     incremental_strategy='delete+insert',
     unique_key=['event_id', 'currency'],
-    order_by='(event_date, currency)'
+    order_by='(event_date, currency)',
+    settings={'max_threads': 2}
   )
 }}
 
