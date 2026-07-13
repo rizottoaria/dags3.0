@@ -24,8 +24,8 @@ export CH_PASSWORD=<password>
 ```bash
 cd petbuddy_dbt
 dbt deps          # если добавите пакеты
-dbt run  --profiles-dir .     # соберёт все витрины в petbuddy_clean
-dbt test --profiles-dir .     # прогонит тесты качества
+dbt run  --profiles-dir .     # соберёт все витрины (схема petbuddy_clean)
+dbt test --profiles-dir .     # тесты
 dbt docs generate --profiles-dir . && dbt docs serve
 ```
 
