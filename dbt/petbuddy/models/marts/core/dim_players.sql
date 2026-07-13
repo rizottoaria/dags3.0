@@ -42,12 +42,12 @@ agg as (
         dateDiff('day', min(event_date), max(event_date))      as lifespan_days,
         uniq(event_date)                                       as active_days,
 
-        -- Последние известные атрибуты
-        argMax(country, event_at)                              as country,
-        argMax(app_version, event_at)                          as app_version,
-        argMax(ab_version, event_at)                           as ab_version,
-        -- текущая (последняя ненулевая) глава
-        argMaxIf(chapter, event_at, chapter is not null)       as current_chapter,
+        -- Последние ИЗВЕСТНЫЕ (ненулевые) атрибуты: последнее событие часто ping/pause
+        -- с пустыми properties, поэтому обычный argMax дал бы NULL.
+        argMaxIf(country, event_at, country is not null)          as country,
+        argMaxIf(app_version, event_at, app_version is not null)  as app_version,
+        argMaxIf(ab_version, event_at, ab_version is not null)    as ab_version,
+        argMaxIf(chapter, event_at, chapter is not null)          as current_chapter,
 
         -- Активность
         count()                                                as total_events,
