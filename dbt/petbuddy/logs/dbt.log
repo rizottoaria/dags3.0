@@ -1,0 +1,555 @@
+[0m16:33:04.960219 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09DDA9940>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09BB79090>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09E85F9D0>]}
+
+
+============================== 16:33:04.965199 | 887881dc-c838-480b-9fee-f8ab2d19fc40 ==============================
+[0m16:33:04.965199 [info ] [MainThread]: Running with dbt=1.10.16
+[0m16:33:04.965637 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'profiles_dir': '.', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'use_colors': 'True', 'invocation_command': 'dbt run --profiles-dir . -s fct_economy_flows --full-refresh', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'C:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy\\logs'}
+[0m16:33:05.303734 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09E2650F0>]}
+[0m16:33:05.368702 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A005EAD0>]}
+[0m16:33:05.370480 [info ] [MainThread]: Registered adapter: clickhouse=1.9.7
+[0m16:33:06.171204 [debug] [MainThread]: checksum: c4b99e2e3bb042c661c8397fd92290cd0d52b31ce393ad721fa0bb3c9591dd0f, vars: {}, profile: , target: , version: 1.10.16
+[0m16:33:06.173132 [info ] [MainThread]: Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m16:33:06.173952 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'partial_parser', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A0005050>]}
+[0m16:33:08.978165 [warn ] [MainThread]: [[33mWARNING[0m][MissingArgumentsPropertyInGenericTestDeprecation]: Deprecated
+functionality
+Found top-level arguments to test `accepted_values`. Arguments to generic tests
+should be nested under the `arguments` property.`
+[0m16:33:08.978587 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'deprecation', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'property_': 'warn', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A05007D0>]}
+[0m16:33:09.185609 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A075C590>]}
+[0m16:33:09.247052 [debug] [MainThread]: Wrote artifact WritableManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\manifest.json
+[0m16:33:09.280052 [debug] [MainThread]: Wrote artifact SemanticManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\semantic_manifest.json
+[0m16:33:09.331495 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A09E5B20>]}
+[0m16:33:09.331913 [info ] [MainThread]: Found 10 models, 12 data tests, 1 source, 486 macros
+[0m16:33:09.332165 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A0A4D610>]}
+[0m16:33:09.333433 [info ] [MainThread]: 
+[0m16:33:09.333714 [info ] [MainThread]: Concurrency: 1 threads (target='dev')
+[0m16:33:09.333919 [info ] [MainThread]: 
+[0m16:33:09.334254 [debug] [MainThread]: Acquiring new clickhouse connection 'master'
+[0m16:33:09.335037 [debug] [ThreadPool]: Acquiring new clickhouse connection 'list_'
+[0m16:33:09.343122 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m16:33:18.145152 [debug] [ThreadPool]: dbt_clickhouse adapter: On list_: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "connection_name": "list_"} */
+
+    select name from system.databases
+  ...
+[0m16:33:18.192685 [debug] [ThreadPool]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:33:18.353085 [debug] [ThreadPool]: Acquiring new clickhouse connection 'list__petbuddy_clean'
+[0m16:33:18.358518 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m16:33:18.891922 [debug] [ThreadPool]: dbt_clickhouse adapter: On list__petbuddy_clean: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "connection_name": "list__petbuddy_clean"} */
+select
+      t.name as name,
+      t.database as schema,
+      multiIf(
+        engine in ('MaterializedView', 'View'), 'view',
+        engine = 'Dictionary', 'dictionary',
+        'table'
+      ) as type,
+      db.engine as db_engine,0 as is_on_cluster
+          from system.tables as t join system.databases as db on t.database = db.name
+        where schema = 'petbuddy_clean'
+      
+
+  ...
+[0m16:33:18.941958 [debug] [ThreadPool]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:33:18.944592 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0CD2E3AC0>]}
+[0m16:33:18.950795 [debug] [Thread-1 (]: Began running node model.petbuddy.fct_economy_flows
+[0m16:33:18.951287 [info ] [Thread-1 (]: 1 of 1 START sql incremental model `petbuddy_clean`.`fct_economy_flows` ........ [RUN]
+[0m16:33:18.951726 [debug] [Thread-1 (]: Acquiring new clickhouse connection 'model.petbuddy.fct_economy_flows'
+[0m16:33:18.952038 [debug] [Thread-1 (]: Began compiling node model.petbuddy.fct_economy_flows
+[0m16:33:18.962288 [debug] [Thread-1 (]: Writing injected SQL for node "model.petbuddy.fct_economy_flows"
+[0m16:33:18.965303 [debug] [Thread-1 (]: Writing injected SQL for node "model.petbuddy.fct_economy_flows"
+[0m16:33:18.966785 [debug] [Thread-1 (]: Began executing node model.petbuddy.fct_economy_flows
+[0m16:33:19.033144 [debug] [Thread-1 (]: Opening a new connection, currently in state init
+[0m16:33:19.563469 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+            
+
+    
+        create table `petbuddy_clean`.`fct_economy_flows__dbt_tmp`
+        
+  
+        
+  engine = MergeTree()
+        order by ((event_date, currency))
+        
+        
+        
+        
+                    -- end_of_sql
+                    SETTINGS replicated_deduplication_window='0'
+
+                    
+            empty
+          as (
+            
+
+with __dbt__cte__int_events__economy as (
+-- Разворачивает событие экономики в строки по каждой затронутой валюте.
+-- Топ-уровневые ключи Currency_* / Chests_* в properties = дельта баланса
+-- (balanceSnapshot лежит во вложенном объекте и сюда не попадает).
+select
+    id                                    as event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    action_source                         as flow_source,
+    kv.1                                  as currency,
+    kv.2                                  as delta,
+    if(kv.2 >= 0, 'in', 'out')            as direction,
+    abs(kv.2)                             as amount
+from `petbuddy_clean`.`stg_events`
+array join
+    arrayFilter(
+        x -> x.1 like 'Currency@_%' escape '@' or x.1 like 'Chests@_%' escape '@',
+        JSONExtractKeysAndValues(toString(properties), 'Int64')
+    ) as kv
+where event_name in ('resource_top_up', 'resource_consume')
+) -- Факт движения игровых валют: приход (source) и расход (sink) по каждой валюте.
+-- Инкрементально: при обычном run обрабатываем только последние event_date
+-- (окно 2 дня — на случай долетающих/переигранных событий), а delete+insert
+-- по (event_id, currency) заменяет строки этих дней. Полный пересбор: --full-refresh.
+select
+    event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    flow_source,
+    currency,
+    direction,
+    delta,
+    amount
+from `__dbt__cte__int_events__economy`
+
+
+          )
+        
+        ...
+[0m16:33:19.618568 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:33:19.639753 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+    select name, type from system.columns where table = 'fct_economy_flows__dbt_tmp'
+    
+      
+        and database = 'petbuddy_clean'
+      
+    
+    order by position
+  ...
+[0m16:33:19.684635 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:33:19.690754 [debug] [Thread-1 (]: Writing runtime sql for node "model.petbuddy.fct_economy_flows"
+[0m16:33:19.694793 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+        
+  
+    
+    
+    
+        
+         
+
+
+        insert into `petbuddy_clean`.`fct_economy_flows__dbt_tmp`
+        ("event_id", "player_id", "session_id", "event_at", "event_date", "event_name", "country", "ab_version", "flow_source", "currency", "direction", "delta", "amount")
+
+with __dbt__cte__int_events__economy as (
+-- Разворачивает событие экономики в строки по каждой затронутой валюте.
+-- Топ-уровневые ключи Currency_* / Chests_* в properties = дельта баланса
+-- (balanceSnapshot лежит во вложенном объекте и сюда не попадает).
+select
+    id                                    as event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    action_source                         as flow_source,
+    kv.1                                  as currency,
+    kv.2                                  as delta,
+    if(kv.2 >= 0, 'in', 'out')            as direction,
+    abs(kv.2)                             as amount
+from `petbuddy_clean`.`stg_events`
+array join
+    arrayFilter(
+        x -> x.1 like 'Currency@_%' escape '@' or x.1 like 'Chests@_%' escape '@',
+        JSONExtractKeysAndValues(toString(properties), 'Int64')
+    ) as kv
+where event_name in ('resource_top_up', 'resource_consume')
+) -- Факт движения игровых валют: приход (source) и расход (sink) по каждой валюте.
+-- Инкрементально: при обычном run обрабатываем только последние event_date
+-- (окно 2 дня — на случай долетающих/переигранных событий), а delete+insert
+-- по (event_id, currency) заменяет строки этих дней. Полный пересбор: --full-refresh.
+select
+    event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    flow_source,
+    currency,
+    direction,
+    delta,
+    amount
+from `__dbt__cte__int_events__economy`
+
+
+  
+    ...
+[0m16:39:17.861589 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 358.17 seconds
+[0m16:39:17.868574 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+    drop table if exists `petbuddy_clean`.`fct_economy_flows__dbt_backup` 
+  
+  ...
+[0m16:39:17.962072 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.09 seconds
+[0m16:39:17.964401 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+    rename table `petbuddy_clean`.`fct_economy_flows__dbt_tmp` to `petbuddy_clean`.`fct_economy_flows__dbt_backup` 
+  
+  ...
+[0m16:39:18.013481 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:39:18.017428 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+EXCHANGE TABLES `petbuddy_clean`.`fct_economy_flows__dbt_backup` AND `petbuddy_clean`.`fct_economy_flows` 
+  
+  ...
+[0m16:39:18.062041 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:39:18.082057 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+drop table if exists `petbuddy_clean`.`fct_economy_flows__dbt_backup` 
+  ...
+[0m16:39:18.125902 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:39:18.132945 [debug] [Thread-1 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': '887881dc-c838-480b-9fee-f8ab2d19fc40', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09E1F7B10>]}
+[0m16:39:18.134018 [info ] [Thread-1 (]: 1 of 1 OK created sql incremental model `petbuddy_clean`.`fct_economy_flows` ... [[32mOK[0m in 359.18s]
+[0m16:39:18.134841 [debug] [Thread-1 (]: Finished running node model.petbuddy.fct_economy_flows
+[0m16:39:18.136928 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m16:39:18.137377 [debug] [MainThread]: Connection 'list_' was left open.
+[0m16:39:18.137748 [debug] [MainThread]: On list_: Close
+[0m16:39:18.138041 [debug] [MainThread]: Connection 'list__petbuddy_clean' was left open.
+[0m16:39:18.138322 [debug] [MainThread]: On list__petbuddy_clean: Close
+[0m16:39:18.138577 [debug] [MainThread]: Connection 'model.petbuddy.fct_economy_flows' was left open.
+[0m16:39:18.138848 [debug] [MainThread]: On model.petbuddy.fct_economy_flows: Close
+[0m16:39:18.139550 [info ] [MainThread]: 
+[0m16:39:18.139894 [info ] [MainThread]: Finished running 1 incremental model in 0 hours 6 minutes and 8.81 seconds (368.81s).
+[0m16:39:18.140472 [debug] [MainThread]: Command end result
+[0m16:39:18.166565 [debug] [MainThread]: Wrote artifact WritableManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\manifest.json
+[0m16:39:18.170006 [debug] [MainThread]: Wrote artifact SemanticManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\semantic_manifest.json
+[0m16:39:18.174799 [debug] [MainThread]: Wrote artifact RunExecutionResult to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\run_results.json
+[0m16:39:18.175133 [info ] [MainThread]: 
+[0m16:39:18.175723 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m16:39:18.177102 [info ] [MainThread]: 
+[0m16:39:18.177541 [info ] [MainThread]: Done. PASS=1 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=1
+[0m16:39:18.177967 [warn ] [MainThread]: [[33mWARNING[0m][DeprecationsSummary]: Deprecated functionality
+Summary of encountered deprecations:
+- MissingArgumentsPropertyInGenericTestDeprecation: 1 occurrence
+To see all deprecation instances instead of just the first occurrence of each,
+run command again with the `--show-all-deprecations` flag. You may also need to
+run with `--no-partial-parse` as some deprecations are only encountered during
+parsing.
+[0m16:39:18.179342 [debug] [MainThread]: Command `dbt run` succeeded at 16:39:18.179231 after 373.48 seconds
+[0m16:39:18.179673 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A097D950>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D0A0A3EED0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001D09EFA2AC0>]}
+[0m16:39:18.179959 [debug] [MainThread]: Flushing usage events
+[0m16:39:18.911574 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m16:42:00.531102 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F8F259940>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F8CFED090>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F8FD0F9D0>]}
+
+
+============================== 16:42:00.536160 | d01ec917-0ffb-4366-83fb-6668d06f2c84 ==============================
+[0m16:42:00.536160 [info ] [MainThread]: Running with dbt=1.10.16
+[0m16:42:00.536625 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'False', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': '.', 'invocation_command': 'dbt run --profiles-dir . -s fct_economy_flows', 'use_colors': 'True', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'C:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy\\logs'}
+[0m16:42:00.833868 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F8F7150F0>]}
+[0m16:42:00.903921 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F9150EAD0>]}
+[0m16:42:00.905844 [info ] [MainThread]: Registered adapter: clickhouse=1.9.7
+[0m16:42:01.450189 [debug] [MainThread]: checksum: c4b99e2e3bb042c661c8397fd92290cd0d52b31ce393ad721fa0bb3c9591dd0f, vars: {}, profile: , target: , version: 1.10.16
+[0m16:42:01.639348 [debug] [MainThread]: Partial parsing enabled: 0 files deleted, 0 files added, 0 files changed.
+[0m16:42:01.639692 [debug] [MainThread]: Partial parsing enabled, no changes found, skipping parsing
+[0m16:42:01.689425 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F914B7550>]}
+[0m16:42:01.777781 [debug] [MainThread]: Wrote artifact WritableManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\manifest.json
+[0m16:42:01.783172 [debug] [MainThread]: Wrote artifact SemanticManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\semantic_manifest.json
+[0m16:42:01.836683 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F91AD8E60>]}
+[0m16:42:01.837305 [info ] [MainThread]: Found 10 models, 12 data tests, 1 source, 486 macros
+[0m16:42:01.837737 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022F916A09F0>]}
+[0m16:42:01.839842 [info ] [MainThread]: 
+[0m16:42:01.840233 [info ] [MainThread]: Concurrency: 1 threads (target='dev')
+[0m16:42:01.840536 [info ] [MainThread]: 
+[0m16:42:01.841019 [debug] [MainThread]: Acquiring new clickhouse connection 'master'
+[0m16:42:01.841974 [debug] [ThreadPool]: Acquiring new clickhouse connection 'list_'
+[0m16:42:01.852072 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m16:42:03.354955 [debug] [ThreadPool]: dbt_clickhouse adapter: On list_: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "connection_name": "list_"} */
+
+    select name from system.databases
+  ...
+[0m16:42:03.395824 [debug] [ThreadPool]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:03.423499 [debug] [ThreadPool]: Acquiring new clickhouse connection 'list__petbuddy_clean'
+[0m16:42:03.429801 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m16:42:03.910360 [debug] [ThreadPool]: dbt_clickhouse adapter: On list__petbuddy_clean: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "connection_name": "list__petbuddy_clean"} */
+select
+      t.name as name,
+      t.database as schema,
+      multiIf(
+        engine in ('MaterializedView', 'View'), 'view',
+        engine = 'Dictionary', 'dictionary',
+        'table'
+      ) as type,
+      db.engine as db_engine,0 as is_on_cluster
+          from system.tables as t join system.databases as db on t.database = db.name
+        where schema = 'petbuddy_clean'
+      
+
+  ...
+[0m16:42:03.954279 [debug] [ThreadPool]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:03.959825 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022FBE571F30>]}
+[0m16:42:03.969930 [debug] [Thread-1 (]: Began running node model.petbuddy.fct_economy_flows
+[0m16:42:03.970876 [info ] [Thread-1 (]: 1 of 1 START sql incremental model `petbuddy_clean`.`fct_economy_flows` ........ [RUN]
+[0m16:42:03.971889 [debug] [Thread-1 (]: Acquiring new clickhouse connection 'model.petbuddy.fct_economy_flows'
+[0m16:42:03.972523 [debug] [Thread-1 (]: Began compiling node model.petbuddy.fct_economy_flows
+[0m16:42:03.999196 [debug] [Thread-1 (]: Writing injected SQL for node "model.petbuddy.fct_economy_flows"
+[0m16:42:04.002538 [debug] [Thread-1 (]: Writing injected SQL for node "model.petbuddy.fct_economy_flows"
+[0m16:42:04.003236 [debug] [Thread-1 (]: Began executing node model.petbuddy.fct_economy_flows
+[0m16:42:04.046605 [debug] [Thread-1 (]: Opening a new connection, currently in state init
+[0m16:42:04.528381 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+drop table if exists `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84` 
+  ...
+[0m16:42:04.569733 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:04.614087 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+            
+
+    
+        create table `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84`
+        
+  
+        
+  engine = MergeTree()
+        order by ((event_date, currency))
+        
+        
+        
+        
+                    -- end_of_sql
+                    SETTINGS replicated_deduplication_window='0'
+
+                    
+            empty
+          as (
+            
+
+with __dbt__cte__int_events__economy as (
+-- Разворачивает событие экономики в строки по каждой затронутой валюте.
+-- Топ-уровневые ключи Currency_* / Chests_* в properties = дельта баланса
+-- (balanceSnapshot лежит во вложенном объекте и сюда не попадает).
+select
+    id                                    as event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    action_source                         as flow_source,
+    kv.1                                  as currency,
+    kv.2                                  as delta,
+    if(kv.2 >= 0, 'in', 'out')            as direction,
+    abs(kv.2)                             as amount
+from `petbuddy_clean`.`stg_events`
+array join
+    arrayFilter(
+        x -> x.1 like 'Currency@_%' escape '@' or x.1 like 'Chests@_%' escape '@',
+        JSONExtractKeysAndValues(toString(properties), 'Int64')
+    ) as kv
+where event_name in ('resource_top_up', 'resource_consume')
+) -- Факт движения игровых валют: приход (source) и расход (sink) по каждой валюте.
+-- Инкрементально: при обычном run обрабатываем только последние event_date
+-- (окно 2 дня — на случай долетающих/переигранных событий), а delete+insert
+-- по (event_id, currency) заменяет строки этих дней. Полный пересбор: --full-refresh.
+select
+    event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    flow_source,
+    currency,
+    direction,
+    delta,
+    amount
+from `__dbt__cte__int_events__economy`
+
+
+where event_date >= (select max(event_date) from `petbuddy_clean`.`fct_economy_flows`) - toIntervalDay(2)
+
+          )
+        
+        ...
+[0m16:42:04.666552 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:42:04.691225 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+    select name, type from system.columns where table = 'fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84'
+    
+      
+        and database = 'petbuddy_clean'
+      
+    
+    order by position
+  ...
+[0m16:42:04.733706 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:04.739650 [debug] [Thread-1 (]: Writing runtime sql for node "model.petbuddy.fct_economy_flows"
+[0m16:42:04.741293 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+        
+  
+    
+    
+    
+        
+         
+
+
+        insert into `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84`
+        ("event_id", "player_id", "session_id", "event_at", "event_date", "event_name", "country", "ab_version", "flow_source", "currency", "direction", "delta", "amount")
+
+with __dbt__cte__int_events__economy as (
+-- Разворачивает событие экономики в строки по каждой затронутой валюте.
+-- Топ-уровневые ключи Currency_* / Chests_* в properties = дельта баланса
+-- (balanceSnapshot лежит во вложенном объекте и сюда не попадает).
+select
+    id                                    as event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    action_source                         as flow_source,
+    kv.1                                  as currency,
+    kv.2                                  as delta,
+    if(kv.2 >= 0, 'in', 'out')            as direction,
+    abs(kv.2)                             as amount
+from `petbuddy_clean`.`stg_events`
+array join
+    arrayFilter(
+        x -> x.1 like 'Currency@_%' escape '@' or x.1 like 'Chests@_%' escape '@',
+        JSONExtractKeysAndValues(toString(properties), 'Int64')
+    ) as kv
+where event_name in ('resource_top_up', 'resource_consume')
+) -- Факт движения игровых валют: приход (source) и расход (sink) по каждой валюте.
+-- Инкрементально: при обычном run обрабатываем только последние event_date
+-- (окно 2 дня — на случай долетающих/переигранных событий), а delete+insert
+-- по (event_id, currency) заменяет строки этих дней. Полный пересбор: --full-refresh.
+select
+    event_id,
+    player_id,
+    session_id,
+    event_at,
+    event_date,
+    event_name,
+    country,
+    ab_version,
+    flow_source,
+    currency,
+    direction,
+    delta,
+    amount
+from `__dbt__cte__int_events__economy`
+
+
+where event_date >= (select max(event_date) from `petbuddy_clean`.`fct_economy_flows`) - toIntervalDay(2)
+
+  
+      ...
+[0m16:42:26.259417 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 21.52 seconds
+[0m16:42:26.261073 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+      
+            delete from `petbuddy_clean`.`fct_economy_flows` where (event_id, currency) in (select event_id, currency
+                                          from `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84`)
+      
+    ...
+[0m16:42:28.529507 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 2.27 seconds
+[0m16:42:28.533717 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+    select name, type from system.columns where table = 'fct_economy_flows'
+    
+      
+        and database = 'petbuddy_clean'
+      
+    
+    order by position
+  ...
+[0m16:42:28.574003 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:28.577036 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+
+        insert into `petbuddy_clean`.`fct_economy_flows` select "event_id", "player_id", "session_id", "event_at", "event_date", "event_name", "country", "ab_version", "flow_source", "currency", "direction", "delta", "amount" from `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84` 
+    ...
+[0m16:42:28.631231 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.05 seconds
+[0m16:42:28.634037 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+drop table if exists `petbuddy_clean`.`fct_economy_flows__dbt_new_data_d01ec917_0ffb_4366_83fb_6668d06f2c84` 
+  ...
+[0m16:42:28.670020 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:28.674814 [debug] [Thread-1 (]: dbt_clickhouse adapter: On model.petbuddy.fct_economy_flows: /* {"app": "dbt", "dbt_version": "1.10.16", "profile_name": "petbuddy", "target_name": "dev", "node_id": "model.petbuddy.fct_economy_flows"} */
+drop table if exists `petbuddy_clean`.`fct_economy_flows__dbt_distributed_new_data` 
+  ...
+[0m16:42:28.711989 [debug] [Thread-1 (]: dbt_clickhouse adapter: SQL status: OK in 0.04 seconds
+[0m16:42:28.726145 [debug] [Thread-1 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'd01ec917-0ffb-4366-83fb-6668d06f2c84', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022FBE3659D0>]}
+[0m16:42:28.726824 [info ] [Thread-1 (]: 1 of 1 OK created sql incremental model `petbuddy_clean`.`fct_economy_flows` ... [[32mOK[0m in 24.75s]
+[0m16:42:28.727642 [debug] [Thread-1 (]: Finished running node model.petbuddy.fct_economy_flows
+[0m16:42:28.729642 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m16:42:28.730195 [debug] [MainThread]: Connection 'list_' was left open.
+[0m16:42:28.730718 [debug] [MainThread]: On list_: Close
+[0m16:42:28.731253 [debug] [MainThread]: Connection 'list__petbuddy_clean' was left open.
+[0m16:42:28.731629 [debug] [MainThread]: On list__petbuddy_clean: Close
+[0m16:42:28.731945 [debug] [MainThread]: Connection 'model.petbuddy.fct_economy_flows' was left open.
+[0m16:42:28.732260 [debug] [MainThread]: On model.petbuddy.fct_economy_flows: Close
+[0m16:42:28.732901 [info ] [MainThread]: 
+[0m16:42:28.733253 [info ] [MainThread]: Finished running 1 incremental model in 0 hours 0 minutes and 26.89 seconds (26.89s).
+[0m16:42:28.733889 [debug] [MainThread]: Command end result
+[0m16:42:28.751886 [debug] [MainThread]: Wrote artifact WritableManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\manifest.json
+[0m16:42:28.754943 [debug] [MainThread]: Wrote artifact SemanticManifest to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\semantic_manifest.json
+[0m16:42:28.759410 [debug] [MainThread]: Wrote artifact RunExecutionResult to C:\Users\Oksana\Documents\dags3.0\dbt\petbuddy\target\run_results.json
+[0m16:42:28.760085 [info ] [MainThread]: 
+[0m16:42:28.761573 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m16:42:28.761889 [info ] [MainThread]: 
+[0m16:42:28.762140 [info ] [MainThread]: Done. PASS=1 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=1
+[0m16:42:28.763435 [debug] [MainThread]: Command `dbt run` succeeded at 16:42:28.763318 after 28.44 seconds
+[0m16:42:28.763818 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022FBE2BB8B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022FBE86A210>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000022FBE86A5D0>]}
+[0m16:42:28.764157 [debug] [MainThread]: Flushing usage events
+[0m16:42:29.467688 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m19:17:32.372768 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000028763EE57F0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000028761C251D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000002876498F9D0>]}
+
+
+============================== 19:17:32.379521 | d7dde6e7-5dfa-4899-8b9e-e15463c79653 ==============================
+[0m19:17:32.379521 [info ] [MainThread]: Running with dbt=1.10.16
+[0m19:17:32.380495 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'None', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'c:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy', 'invocation_command': 'dbt ', 'indirect_selection': 'eager', 'use_colors': 'True', 'use_experimental_parser': 'False', 'log_path': 'c:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy\\logs'}
+[0m19:17:32.558959 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'd7dde6e7-5dfa-4899-8b9e-e15463c79653', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000028764384FC0>]}
+[0m19:17:32.583801 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m19:17:32.584943 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m19:17:32.586350 [debug] [MainThread]: Command `cli deps` succeeded at 19:17:32.586250 after 0.37 seconds
+[0m19:17:32.586615 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000028766264490>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000287662668B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000028764F13B50>]}
+[0m19:17:32.586871 [debug] [MainThread]: Flushing usage events
+[0m19:17:33.326870 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m10:30:38.419622 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264BE1657F0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264BBEBD1D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264BEC0F9D0>]}
+
+
+============================== 10:30:38.426892 | 98bf98f8-94a4-45cc-80f3-5eef1020edde ==============================
+[0m10:30:38.426892 [info ] [MainThread]: Running with dbt=1.10.16
+[0m10:30:38.427827 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'c:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy', 'invocation_command': 'dbt ', 'use_colors': 'True', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'c:\\Users\\Oksana\\Documents\\dags3.0\\dbt\\petbuddy\\logs'}
+[0m10:30:38.592899 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '98bf98f8-94a4-45cc-80f3-5eef1020edde', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264BE604FC0>]}
+[0m10:30:38.618109 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m10:30:38.619467 [info ] [MainThread]: Warning: No packages were found in packages.yml
+[0m10:30:38.620904 [debug] [MainThread]: Command `cli deps` succeeded at 10:30:38.620796 after 0.40 seconds
+[0m10:30:38.621174 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264C04A4490>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264C04A68B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000264BF193B50>]}
+[0m10:30:38.621481 [debug] [MainThread]: Flushing usage events
+[0m10:30:39.187657 [debug] [MainThread]: An error was encountered while trying to flush usage events
