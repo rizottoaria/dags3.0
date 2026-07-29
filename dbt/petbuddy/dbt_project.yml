@@ -33,3 +33,12 @@ models:
         +tags: ["core"]
       finance:
         +tags: ["finance"]
+
+# Seed-таблицы (версионируемые CSV).
+seeds:
+  petbuddy:
+    iap_backfill:
+      +column_types:
+        player_id: 'String'
+        event_date: 'Date'
+        revenue_amount: 'Float64'
