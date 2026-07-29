@@ -1,0 +1,27 @@
+name: dbt docs coverage
+
+# Гейт качества документации: падает, если у обязательной витрины нет
+# description в schema.yml. Держит dbt-доки актуальными (не протухают).
+
+on:
+  pull_request:
+    paths:
+      - "dbt/**"
+  push:
+    branches: [main]
+    paths:
+      - "dbt/**"
+  workflow_dispatch:
+
+jobs:
+  check-descriptions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+      - name: Check dbt model descriptions
+        run: python scripts/ci/check_descriptions.py
