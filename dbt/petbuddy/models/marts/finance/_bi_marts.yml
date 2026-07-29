@@ -1,0 +1,162 @@
+version: 2
+
+models:
+  # ---------------------------------------------------------------------------
+  - name: mart_cohort_daily
+    description: >
+      Когортная витрина монетизации по дню закупки (install-day) для версий из var
+      report_versions (default 1.0.24 и 1.0.22). Грейн: cohort_version x cohort_date x
+      day_since_install. Строки УПЛОТНЕНЫ: на каждую когорту есть строки за дни
+      0..min(30, возраст когорты), даже без активности (retained=0), чтобы накопительные
+      метрики и знаменатели не «плавали». Источники: dim_players (когорта, install-день),
+      stg_events (ретеншен), fct_revenue_events (выручка).
+    columns:
+      - name: cohort_version
+        description: Версия игрока (dim_players.app_version), определяет когорту.
+      - name: cohort_date
+        description: День install (dim_players.first_seen_date), день закупки когорты.
+      - name: day_since_install
+        description: Возраст в днях от install (0..30).
+      - name: cohort_size
+        description: Размер конкретной когорты (installs в cohort_version x cohort_date).
+      - name: version_installs
+        description: Полный размер когорты ВЕРСИИ. Знаменатель версионного ретеншена.
+      - name: cohort_age_days
+        description: Возраст когорты сегодня (today - cohort_date). Fixed-cohort фильтр cohort_age_days >= N.
+      - name: retained_users
+        description: Уникальные игроки когорты, активные в этот day_since_install (uniqExact).
+      - name: retention_rate
+        description: retained_users / cohort_size (per-cohort, для когортного треугольника).
+      - name: ad_revenue
+        description: Доход от рекламы (revenue_type=ad_reward) за день жизни.
+      - name: ad_impressions
+        description: Число показов рекламы за день.
+      - name: iap_revenue
+        description: Доход от покупок (revenue_type=purchase) за день.
+      - name: total_revenue
+        description: ad_revenue + iap_revenue за день.
+      - name: cum_ad_revenue
+        description: Накопленный ad_revenue по дням внутри когорты (window sum).
+      - name: cum_total_revenue
+        description: Накопленный total_revenue.
+      - name: ad_arpu_cum
+        description: cum_ad_revenue / cohort_size (per-cohort накопленный ad-ARPU на install).
+      - name: arpu_cum
+        description: cum_total_revenue / cohort_size.
+
+  # ---------------------------------------------------------------------------
+  - name: mart_cohort_daily_country
+    description: >
+      Как mart_cohort_daily, но с разрезом по стране (var report_countries, default US, PH).
+      Ключевое отличие — знаменатель ретеншена version_country_installs (installs версии+страны),
+      т.к. страновой процент нельзя считать от общего размера версии.
+    columns:
+      - name: country
+        description: Страна игрока (dim_players.country).
+      - name: version_country_installs
+        description: Installs версии+страны. Знаменатель странового версионного ретеншена.
+      - name: retention_rate
+        description: retained_users / cohort_size (per-cohort).
+      - name: ad_arpu_cum
+        description: cum_ad_revenue / cohort_size.
+
+  # ---------------------------------------------------------------------------
+  - name: mart_ad_placement_version
+    description: >
+      Реклама (revenue_type=ad_reward) по placement (revenue_source) x app_version.
+      Скоуп версий - var report_versions. Версия событийная (на момент показа).
+    columns:
+      - name: placement
+        description: Место показа рекламы (fct_revenue_events.revenue_source).
+      - name: ad_impressions
+        description: Показы (count).
+      - name: unique_viewers
+        description: Уникальные зрители рекламы (uniqExact player_id).
+      - name: ad_revenue
+        description: Доход от рекламы.
+      - name: ecpm
+        description: ad_revenue / ad_impressions * 1000 (доход на 1000 показов).
+      - name: rev_per_viewer
+        description: ad_revenue / unique_viewers.
+      - name: rev_share_in_version
+        description: Доля placement в суммарном ad_revenue версии.
+
+  # ---------------------------------------------------------------------------
+  - name: mart_ad_placement_country
+    description: >
+      Реклама по placement x app_version x country (US, PH). Аналог mart_ad_placement_version
+      с разрезом по стране; знаменатель доли - доход версии+страны.
+    columns:
+      - name: country
+        description: Страна игрока.
+      - name: ecpm
+        description: ad_revenue / ad_impressions * 1000.
+      - name: rev_share_in_version_country
+        description: Доля placement в доходе версии+страны.
+
+  # ---------------------------------------------------------------------------
+  - name: mart_ad_segment_version
+    description: >
+      Просмотры рекламы (dim_players.ad_rewards_count, lifetime на игрока) в разрезе
+      app_version x country x device_brand. device_brand = первое слово из amp_device_type
+      (Samsung / Poco / Infinix / ...). Для анализа зависимости рекламы от страны и девайса.
+    columns:
+      - name: device_brand
+        description: Бренд девайса (первый токен amp_device_type; (unknown) если пусто).
+      - name: players
+        description: Число игроков в сегменте.
+      - name: ad_viewers
+        description: Игроки с ad_rewards_count > 0.
+      - name: total_ad_rewards
+        description: Сумма ad_rewards_count (avg на игрока = total_ad_rewards / players).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_arpu_prophet_input
+    description: >
+      Вход для Prophet (Superset Predictive Analytics и DAG). Чистый fixed-cohort
+      накопительный ARPU по дням жизни для 1.0.24 (ALL/US/PH), окно 0..14 (когорты age>=14,
+      монотонно). Синтетическая дата ds = 2024-01-01 + day_since_install, чтобы Prophet
+      строил временной ряд и экстраполировал будущие дни.
+    columns:
+      - name: ds
+        description: Синтетическая дата (2024-01-01 + day_since_install) для временного ряда Prophet.
+      - name: cum_ad_arpu
+        description: Накопленный ad-ARPU на install (fixed-cohort).
+      - name: cum_arpu
+        description: Накопленный total ARPU на install (fixed-cohort).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_arpu_forecast
+    description: >
+      Прогноз накопительного ARPU на install (ad и total) на D1..D60 для сегментов
+      версия (country=ALL) и версия x страна (US/PH). Два метода в одной витрине.
+      (1) ЛОГ-МОДЕЛЬ: наклон b из лог-регрессии cum_arpu ~ a + b*ln(day) по чистой
+      fixed-cohort кривой (окно 1..H, H=least(14, возраст старшей когорты)); прогноз
+      якорен на факте D7: forecast = observed(D7) + b*(ln day - ln 7).
+      (2) PROPHET: считается вне dbt (DAG rizottoaria__petbuddy_arpu_forecast -> Python),
+      пишется в petbuddy_clean.arpu_prophet_raw и подмешивается LEFT JOIN.
+      best_* = факт где есть (day <= last_obs), иначе лог-прогноз. Prophet (линейный тренд)
+      обычно выше лог-модели на длинном горизонте (не видит насыщения).
+    columns:
+      - name: day_since_install
+        description: Горизонт прогноза (1..60).
+      - name: observed_cum_ad_arpu
+        description: Фактический накопленный ad-ARPU (maturity-adjusted), NULL за пределами данных.
+      - name: observed_cum_arpu
+        description: Фактический накопленный total ARPU.
+      - name: forecast_cum_ad_arpu
+        description: Лог-прогноз ad-ARPU (якорь D7 + b*ln).
+      - name: forecast_cum_arpu
+        description: Лог-прогноз total ARPU.
+      - name: prophet_cum_ad_arpu
+        description: Prophet-прогноз ad-ARPU (из arpu_prophet_raw; NULL для версий вне 1.0.24).
+      - name: prophet_cum_arpu
+        description: Prophet-прогноз total ARPU.
+      - name: best_cum_ad_arpu
+        description: Факт где есть, иначе лог-прогноз (ad).
+      - name: best_cum_arpu
+        description: Факт где есть, иначе лог-прогноз (total).
+      - name: is_forecast
+        description: 1 - день за пределами наблюдаемых данных (day > last_obs_day).
+      - name: fit_points
+        description: Число точек обучения лог-регрессии (диагностика).

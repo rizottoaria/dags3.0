@@ -28,6 +28,7 @@ LOG_DIR = "/tmp/dbt_petbuddy/logs"
     max_active_runs=1,
     tags=["dbt", "clickhouse", "petbuddy", "marts"],
     default_args={"retries": 1, "retry_delay": timedelta(minutes=10)},
+    doc_md=__doc__,
 )
 def petbuddy_dbt_marts():
 
