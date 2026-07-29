@@ -9,12 +9,8 @@ arpu_prophet_forecast.py
 Выход: petbuddy_clean.arpu_prophet_raw (cohort_version, country, day_since_install,
                                         prophet_cum_ad_arpu, prophet_cum_arpu) за дни 1..HORIZON.
 
-Параметры Prophet совпадают с настройкой Superset Predictive Analytics:
-  interval_width=0.8, без сезонностей (у накопительной кривой их нет), линейный тренд.
+Параметры Prophet: interval_width=0.8, без сезонностей (у накопительной кривой их нет), линейный тренд.
 
-Запускается из dbt-venv (там есть prophet и clickhouse-connect):
-  /home/airflow/dbt-venv/bin/python arpu_prophet_forecast.py
-Креды CH берутся из env CH_HOST / CH_USER / CH_PASSWORD (DAG подставляет из Airflow Variables).
 """
 import os
 import pandas as pd
