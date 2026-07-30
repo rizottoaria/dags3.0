@@ -22,8 +22,8 @@ LOG_DIR = "/tmp/dbt_petbuddy/logs"
 
 @dag(
     dag_id="rizottoaria__petbuddy_dbt_marts",
-    schedule=timedelta(days=1),
-    start_date=datetime(2026, 1, 1),
+    schedule='0 6 * * *',
+    start_date=datetime(2026, 7, 1),
     catchup=False,
     max_active_runs=1,
     tags=["dbt", "clickhouse", "petbuddy", "marts"],
