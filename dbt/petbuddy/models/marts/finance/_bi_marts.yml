@@ -113,17 +113,20 @@ models:
   # ---------------------------------------------------------------------------
   - name: mart_arpu_prophet_input
     description: >
-      Вход для Prophet (Superset Predictive Analytics и DAG). Чистый fixed-cohort
-      накопительный ARPU по дням жизни для 1.0.24 (ALL/US/PH), окно 0..14 (когорты age>=14,
-      монотонно). Синтетическая дата ds = 2024-01-01 + day_since_install, чтобы Prophet
-      строил временной ряд и экстраполировал будущие дни.
+      Вход для Prophet (Superset Predictive Analytics и DAG). Наблюдаемый накопительный
+      ARPU на install по дням жизни для 1.0.24 (ALL/US/PH). Maturity-adjusted: на каждый
+      день берём все когорты, дожившие до него (максимум реальных точек до возраста версии),
+      дни с installs < var prophet_min_installs (дефолт 20) отбрасываем как шум.
+      Синтетическая дата ds = 2024-01-01 + day_since_install для Prophet.
     columns:
       - name: ds
         description: Синтетическая дата (2024-01-01 + day_since_install) для временного ряда Prophet.
+      - name: installs
+        description: Сумма cohort_size по когортам, дожившим до этого дня (размер выборки точки).
       - name: cum_ad_arpu
-        description: Накопленный ad-ARPU на install (fixed-cohort).
+        description: Накопленный ad-ARPU на install (maturity-adjusted).
       - name: cum_arpu
-        description: Накопленный total ARPU на install (fixed-cohort).
+        description: Накопленный total ARPU на install (maturity-adjusted).
 
   # ---------------------------------------------------------------------------
   - name: mart_arpu_forecast
