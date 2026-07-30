@@ -29,3 +29,14 @@ sources:
             description: "JSON с контекстом (часто пустой)."
           - name: received_at
             description: "Время приёма (версия для ReplacingMergeTree)."
+      - name: amplitude_user_props
+        description: >
+          Свойства пользователя из Amplitude (device_type, city, country, os,
+          platform, version, ...). Одна строка на user_id; ключ user_id = player_id.
+        columns:
+          - name: user_id
+            description: "Идентификатор пользователя = player_id в событиях."
+          - name: props
+            description: "JSON со свойствами (device_type, city, os, platform, ...)."
+          - name: updated_at
+            description: "Время обновления свойств."

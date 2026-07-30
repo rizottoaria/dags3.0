@@ -1,16 +1,27 @@
 {{ config(materialized='table', tags=['marts','finance','bi']) }}
 {#- Просмотры рекламы (ad_rewards_count) в разрезе версия × страна × бренд девайса.
-    Источник — dim_players (версия = текущая версия игрока). Скоуп версий из var. -#}
+    Версия/страна/показы — из dim_players; бренд девайса — из amplitude_user_props
+    (props.device_type, ключ user_id = player_id). Скоуп версий из var. -#}
 {%- set versions = var('report_versions', ['1.0.24','1.0.22']) -%}
 
+with device as (
+    -- одна строка на игрока: последний известный device_type
+    select
+        user_id                                                   as player_id,
+        argMax(nullIf(props.device_type::String, ''), updated_at) as device_type
+    from {{ source('petbuddy', 'amplitude_user_props') }}
+    group by user_id
+)
+
 select
-    app_version,
-    ifNull(country, '(unknown)') as country,
-    if(amp_device_type is null, '(unknown)',
-       splitByChar(' ', assumeNotNull(amp_device_type))[1]) as device_brand,
-    count()                       as players,
-    countIf(ad_rewards_count > 0) as ad_viewers,
-    sum(ad_rewards_count)         as total_ad_rewards
-from {{ ref('dim_players') }}
-where app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
-group by app_version, country, device_brand
+    p.app_version,
+    ifNull(p.country, '(unknown)')          as country,
+    if(d.device_type is null, '(unknown)',
+       splitByChar(' ', assumeNotNull(d.device_type))[1]) as device_brand,
+    count()                          as players,
+    countIf(p.ad_rewards_count > 0)  as ad_viewers,
+    sum(p.ad_rewards_count)          as total_ad_rewards
+from {{ ref('dim_players') }} p
+left join device d on d.player_id = p.player_id
+where p.app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+group by p.app_version, country, device_brand
