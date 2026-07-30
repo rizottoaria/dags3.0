@@ -54,7 +54,9 @@ base as (
       on sk.cohort_version=rv.cohort_version and sk.country=rv.country and sk.cohort_date=rv.cohort_date and sk.day_since_install=rv.d
 )
 select
-    b.cohort_version, b.country, b.cohort_date, b.day_since_install,
+    b.cohort_version, b.country, b.cohort_date,
+    toMonday(b.cohort_date) as cohort_week,          -- понедельник недели установки (недельные когорты)
+    b.day_since_install,
     b.cohort_size, v.version_country_installs,
     toInt32(today() - b.cohort_date) as cohort_age_days,
     b.retained_users,

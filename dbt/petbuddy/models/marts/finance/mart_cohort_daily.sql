@@ -59,6 +59,7 @@ base as (
 select
     b.cohort_version,
     b.cohort_date,
+    toMonday(b.cohort_date) as cohort_week,          -- понедельник недели установки (недельные когорты)
     b.day_since_install,
     b.cohort_size,
     v.version_installs,
