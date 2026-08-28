@@ -163,3 +163,56 @@ models:
         description: 1 - день за пределами наблюдаемых данных (day > last_obs_day).
       - name: fit_points
         description: Число точек обучения лог-регрессии (диагностика).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_cohort_pu
+    description: >
+      Платящие (PU) и IAP-выручка в USD по когортам установки (версия x страна x день закупки).
+      PU_Dk = уникальные игроки с покупкой (IAP) в дни 0..k от установки; d{k}_closed — день k
+      полностью прошёл. Источник — raw.ben_monetization_transactions (usdAmount в USD,
+      profileId=player_id), а не события → покупки не теряются. Скоуп версий >= 1.0.22.
+    columns:
+      - name: cohort_version
+        description: Версия приложения (когорта).
+      - name: country
+        description: Страна игрока ('(unknown)' если пусто).
+      - name: cohort_date
+        description: День установки (когорта).
+      - name: installs
+        description: Размер когорты (уникальные установки).
+      - name: pu_d0
+        description: Уникальные платящие в день 0.
+      - name: pu_d1
+        description: Уникальные платящие в дни 0..1.
+      - name: pu_d3
+        description: Уникальные платящие в дни 0..3 (PU_D3).
+      - name: pu_d7
+        description: Уникальные платящие в дни 0..7.
+      - name: iap_usd_d3
+        description: IAP-выручка USD за дни 0..3.
+      - name: d3_closed
+        description: 1 — день 3 полностью прошёл (cohort_age_days >= 4).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_cohort_pu_daily
+    description: >
+      PU-треугольник (как retention, но для платящих): накопительные уникальные платящие и
+      IAP-выручка USD по дням жизни, по когортам (версия x страна x день закупки).
+      pu_cum(d) — уникальные с первой покупкой в дни 0..d; pu_rate_cum — конверсия к дню d;
+      iap_usd_cum — накопленная IAP-выручка USD. Источник — raw.ben_monetization_transactions.
+      Скоуп версий >= 1.0.22.
+    columns:
+      - name: cohort_version
+        description: Версия приложения (когорта).
+      - name: country
+        description: Страна игрока.
+      - name: cohort_date
+        description: День установки (когорта).
+      - name: day_since_install
+        description: День жизни (0..min(30, возраст)).
+      - name: pu_cum
+        description: Накопительно уникальные платящие к этому дню.
+      - name: pu_rate_cum
+        description: pu_cum / cohort_size (конверсия в платящего к дню).
+      - name: iap_usd_cum
+        description: Накопленная IAP-выручка USD к этому дню.
