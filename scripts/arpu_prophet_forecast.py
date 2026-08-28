@@ -20,7 +20,6 @@ import sys
 ORIGIN = pd.Timestamp("2024-01-01")   # синтетическое начало ряда (см. mart_arpu_prophet_input.ds)
 HORIZON = 60                          # прогноз до D60
 INTERVAL_WIDTH = 0.8
-VERSION = "1.0.24"
 
 
 def _client():
@@ -38,6 +37,8 @@ def _forecast_series(df: pd.DataFrame, ycol: str) -> dict:
     import pandas as pd
     from prophet import Prophet
     d = df[["ds", ycol]].rename(columns={"ds": "ds", ycol: "y"}).dropna()
+    if len(d) < 2:          # Prophet требует >= 2 точки
+        return {}
     n_future = HORIZON - int((d["ds"].max() - ORIGIN).days)
     m = Prophet(
         interval_width=INTERVAL_WIDTH,
@@ -56,7 +57,7 @@ def main() -> int:
     import pandas as pd
     client = _client()
     src = client.query_df(
-        "SELECT country, day_since_install, ds, cum_ad_arpu, cum_arpu "
+        "SELECT cohort_version, country, day_since_install, ds, cum_ad_arpu, cum_arpu "
         "FROM petbuddy_clean.mart_arpu_prophet_input"
     )
     if src.empty:
@@ -64,13 +65,17 @@ def main() -> int:
     src["ds"] = pd.to_datetime(src["ds"])
 
     rows = []
-    for country, g in src.groupby("country"):
+    segs = []
+    for (version, country), g in src.groupby(["cohort_version", "country"]):
         g = g.sort_values("day_since_install")
         ad = _forecast_series(g, "cum_ad_arpu")
         tot = _forecast_series(g, "cum_arpu")
+        if not ad and not tot:          # мало точек — сегмент пропускаем (prophet_* -> NULL)
+            continue
         for day in range(1, HORIZON + 1):
-            rows.append([VERSION, country, day, ad.get(day, 0.0), tot.get(day, 0.0)])
-    print(f"LOG === prophet: {len(rows)} строк для сегментов {sorted(src['country'].unique())}")
+            rows.append([version, country, day, ad.get(day, 0.0), tot.get(day, 0.0)])
+        segs.append(f"{version}/{country}")
+    print(f"LOG === prophet: {len(rows)} строк, {len(segs)} сегментов: {sorted(segs)}")
 
     client.command(
         "CREATE TABLE IF NOT EXISTS petbuddy_clean.arpu_prophet_raw ("
