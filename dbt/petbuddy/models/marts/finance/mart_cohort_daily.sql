@@ -42,14 +42,13 @@ rev as (   -- реклама из событий (в USD)
     where r.event_date >= c.cohort_date and r.event_date - c.cohort_date <= 30
     group by cohort_version, cohort_date, d
 ),
-iap_rev as (   -- IAP в USD из monetization_transactions (авторитетно), а не из событий (смесь валют)
+iap_rev as (   -- IAP в USD (гибрид: monetization_transactions + конверсия старых событий по курсам), см. int_iap_usd
     select c.cohort_version as cohort_version, c.cohort_date as cohort_date,
-           toInt32(toDate(parseDateTimeBestEffortOrNull(JSONExtractString(m.data,'occurredAt'))) - c.cohort_date) as d,
-           sum(JSONExtractFloat(m.data, 'usdAmount')) as iap_revenue
-    from {{ source('raw', 'ben_monetization_transactions') }} m
-    inner join coh c on c.player_id = JSONExtractString(m.data, 'profileId')
-    where JSONExtractString(m.data, 'type') = 'IAP' and JSONExtractString(m.data, 'status') = 'RECORDED'
-      and toDate(parseDateTimeBestEffortOrNull(JSONExtractString(m.data,'occurredAt'))) between c.cohort_date and c.cohort_date + 30
+           toInt32(t.purchase_date - c.cohort_date) as d,
+           sum(t.usd_amount) as iap_revenue
+    from {{ ref('int_iap_usd') }} t
+    inner join coh c using(player_id)
+    where t.purchase_date between c.cohort_date and c.cohort_date + 30
     group by cohort_version, cohort_date, d
 ),
 base as (
