@@ -23,5 +23,5 @@ select
     sum(p.ad_rewards_count)          as total_ad_rewards
 from {{ ref('dim_players') }} p
 left join device d on d.player_id = p.player_id
-where p.app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+where p.app_version is not null and {{ version_gte('p.app_version', '1.0.22') }}
 group by p.app_version, country, device_brand

@@ -7,7 +7,7 @@
 with coh as (
     select player_id, app_version as cohort_version, country, first_seen_date as cohort_date
     from {{ ref('dim_players') }}
-    where app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+    where app_version is not null and {{ version_gte('app_version', '1.0.22') }}
       and country in ({{ "'" ~ countries | join("','") ~ "'" }})
 ),
 sizes as (

@@ -1,5 +1,5 @@
 {{ config(materialized='table', tags=['marts','finance','bi']) }}
-{#- Реклама по placement × версия. Скоуп версий задаётся var report_versions. -#}
+{#- Реклама по placement × версия. Скоуп версий: все >= 1.0.22 (version_gte). -#}
 {%- set versions = var('report_versions', ['1.0.24','1.0.22']) -%}
 
 with src as (
@@ -8,7 +8,7 @@ with src as (
            player_id, revenue_amount
     from {{ ref('fct_revenue_events') }}
     where revenue_type = 'ad_reward'
-      and app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+      and app_version is not null and {{ version_gte('app_version', '1.0.22') }}
 ),
 agg as (
     select app_version, placement,

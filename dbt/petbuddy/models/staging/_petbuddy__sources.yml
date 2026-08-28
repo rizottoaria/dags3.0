@@ -40,3 +40,20 @@ sources:
             description: "JSON со свойствами (device_type, city, os, platform, ...)."
           - name: updated_at
             description: "Время обновления свойств."
+      - name: currency_rates
+        description: >
+          Курсы валют (EUR-база, ReplacingMergeTree по update_at) для конверсии в USD.
+          Используется int_currency_rates_usd. Колонки: business_date, base_currency,
+          target_currency, rate, update_at.
+
+  - name: raw
+    database: raw
+    description: "Сырые суточные выгрузки из внешних источников (ben Postgres), строка = JSON в data."
+    tables:
+      - name: ben_monetization_transactions
+        description: >
+          public.monetization_transactions из ben. Авторитетный источник платежей:
+          у IAP есть usdAmount (USD), originalAmount/originalCurrency, occurredAt.
+          Ключ profileId = player_id. DAG ben_monetization_raw.
+      - name: ben_user
+        description: "public.User из ben (JSON в data). DAG ben_user_raw."

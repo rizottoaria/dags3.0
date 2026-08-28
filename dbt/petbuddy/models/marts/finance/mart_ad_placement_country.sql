@@ -10,7 +10,7 @@ with src as (
            player_id, revenue_amount
     from {{ ref('fct_revenue_events') }}
     where revenue_type = 'ad_reward'
-      and app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+      and app_version is not null and {{ version_gte('app_version', '1.0.22') }}
       and country in ({{ "'" ~ countries | join("','") ~ "'" }})
 ),
 agg as (

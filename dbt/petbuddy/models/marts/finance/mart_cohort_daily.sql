@@ -2,13 +2,13 @@
 {#- Когортная витрина монетизации по дню закупки (install-day).
     Плотная сетка дней 0..min(30, today-cohort_date) на каждую когорту,
     чтобы накопленная выручка и ретеншен считались без дыр.
-    Скоуп версий задаётся var report_versions. -#}
+    Скоуп версий: все >= 1.0.22 (version_gte). -#}
 {%- set versions = var('report_versions', ['1.0.24','1.0.22']) -%}
 
 with coh as (
     select player_id, app_version as cohort_version, first_seen_date as cohort_date
     from {{ ref('dim_players') }}
-    where app_version in ({{ "'" ~ versions | join("','") ~ "'" }})
+    where app_version is not null and {{ version_gte('app_version', '1.0.22') }}
 ),
 sizes as (
     select cohort_version, cohort_date, count() as cohort_size
