@@ -32,15 +32,24 @@ activity as (
     where e.event_date >= c.cohort_date and e.event_date - c.cohort_date <= 30
     group by cohort_version, cohort_date, d
 ),
-rev as (
+rev as (   -- реклама из событий (в USD)
     select c.cohort_version as cohort_version, c.cohort_date as cohort_date,
            toInt32(r.event_date - c.cohort_date) as d,
            sumIf(r.revenue_amount, r.revenue_type = 'ad_reward') as ad_revenue,
-           toUInt32(countIf(r.revenue_type = 'ad_reward'))       as ad_impressions,
-           sumIf(r.revenue_amount, r.revenue_type = 'purchase')  as iap_revenue
+           toUInt32(countIf(r.revenue_type = 'ad_reward'))       as ad_impressions
     from {{ ref('fct_revenue_events') }} r
     inner join coh c using(player_id)
     where r.event_date >= c.cohort_date and r.event_date - c.cohort_date <= 30
+    group by cohort_version, cohort_date, d
+),
+iap_rev as (   -- IAP в USD из monetization_transactions (авторитетно), а не из событий (смесь валют)
+    select c.cohort_version as cohort_version, c.cohort_date as cohort_date,
+           toInt32(toDate(parseDateTimeBestEffortOrNull(JSONExtractString(m.data,'occurredAt'))) - c.cohort_date) as d,
+           sum(JSONExtractFloat(m.data, 'usdAmount')) as iap_revenue
+    from {{ source('raw', 'ben_monetization_transactions') }} m
+    inner join coh c on c.player_id = JSONExtractString(m.data, 'profileId')
+    where JSONExtractString(m.data, 'type') = 'IAP' and JSONExtractString(m.data, 'status') = 'RECORDED'
+      and toDate(parseDateTimeBestEffortOrNull(JSONExtractString(m.data,'occurredAt'))) between c.cohort_date and c.cohort_date + 30
     group by cohort_version, cohort_date, d
 ),
 base as (
@@ -49,12 +58,14 @@ base as (
            ifNull(a.retained_users, 0)  as retained_users,
            ifNull(rv.ad_revenue, 0)     as ad_revenue,
            ifNull(rv.ad_impressions, 0) as ad_impressions,
-           ifNull(rv.iap_revenue, 0)    as iap_revenue
+           ifNull(ir.iap_revenue, 0)    as iap_revenue
     from skeleton sk
     left join activity a
       on sk.cohort_version=a.cohort_version and sk.cohort_date=a.cohort_date and sk.day_since_install=a.d
     left join rev rv
       on sk.cohort_version=rv.cohort_version and sk.cohort_date=rv.cohort_date and sk.day_since_install=rv.d
+    left join iap_rev ir
+      on sk.cohort_version=ir.cohort_version and sk.cohort_date=ir.cohort_date and sk.day_since_install=ir.d
 )
 select
     b.cohort_version,
