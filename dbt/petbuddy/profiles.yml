@@ -11,7 +11,7 @@ petbuddy:
   outputs:
     dev:
       type: clickhouse
-      threads: 4                  # параллелим независимые витрины (было 1 → сборка вылезала за 30 мин)
+      threads: 1                  # НЕ повышать: параллельные сканы petbuddy.events бьют лимит памяти CH (5.24 GiB → Code 241 в mart_daily_active_users). Время лечится оптимизацией mart_currency_balance_daily + таймаутом 45мин в даге.
       host: "{{ env_var('CH_HOST', '185.182.9.18') }}"
       port: 8123
       user: "{{ env_var('CH_USER', 'default') }}"

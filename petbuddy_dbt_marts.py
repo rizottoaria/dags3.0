@@ -32,7 +32,7 @@ LOG_DIR = "/tmp/dbt_petbuddy/logs"
 )
 def petbuddy_dbt_marts():
 
-    @task(execution_timeout=timedelta(minutes=45))
+    @task(execution_timeout=timedelta(minutes=60))
     def dbt_build() -> None:
         import os
         import subprocess
