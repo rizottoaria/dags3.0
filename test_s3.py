@@ -218,7 +218,7 @@ def currency_rates_etl():
         # Нужен dbt-моделям int_currency_rates_usd / int_iap_usd. HTTP-паттерн как в ben_user_raw.
         import json
         auth    = ("dbt", Variable.get("CH_DBT_PASSWORD"))
-        ch_host = Variable.get("CH_DBT_HOST", default="clickhouse")
+        ch_host = Variable.get("CH_DBT_HOST")
         ch_url  = "http://" + ch_host + ":8123/"
 
         base          = data["base_code"]
