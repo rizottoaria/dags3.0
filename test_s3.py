@@ -212,10 +212,38 @@ def currency_rates_etl():
         print("Rows ingested: " + str(count))
         print("Soda DQ checks run independently via cron in soda container (hourly)")
 
-    file_path = save_to_parquet(fetch_rates())
+    @task
+    def ingest_to_clickhouse(data: dict) -> int:
+        # Независимый sink в CH на 185 (petbuddy.currency_rates, ReplacingMergeTree(update_at)).
+        # Нужен dbt-моделям int_currency_rates_usd / int_iap_usd. HTTP-паттерн как в ben_user_raw.
+        import json
+        auth    = ("dbt", Variable.get("CH_DBT_PASSWORD"))
+        ch_host = Variable.get("CH_DBT_HOST", default="clickhouse")
+        ch_url  = "http://" + ch_host + ":8123/"
+
+        base          = data["base_code"]
+        business_date = pd.to_datetime(data["time_last_update_utc"]).date().isoformat()
+        update_at     = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+        lines = [json.dumps({
+            "business_date": business_date, "base_currency": base,
+            "target_currency": t, "rate": float(r), "update_at": update_at,
+        }) for t, r in data["conversion_rates"].items()]
+
+        q = ("INSERT INTO petbuddy.currency_rates "
+             "(business_date, base_currency, target_currency, rate, update_at) FORMAT JSONEachRow")
+        resp = requests.post(ch_url, params={"query": q},
+                             data="\n".join(lines).encode("utf-8"), auth=auth, timeout=60)
+        resp.raise_for_status()
+        print("CH currency_rates: " + str(len(lines)) + " строк за " + business_date)
+        return len(lines)
+
+    rates     = fetch_rates()
+    file_path = save_to_parquet(rates)
     filename  = upload_to_s3(file_path)
     count     = ingest_to_iceberg(filename)
     soda_dq_scan(count)
+    ingest_to_clickhouse(rates)
 
 
 currency_rates_etl()
