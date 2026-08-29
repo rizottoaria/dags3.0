@@ -11,6 +11,7 @@ petbuddy:
   outputs:
     dev:
       type: clickhouse
+      threads: 4                  # параллелим независимые витрины (было 1 → сборка вылезала за 30 мин)
       host: "{{ env_var('CH_HOST', '185.182.9.18') }}"
       port: 8123
       user: "{{ env_var('CH_USER', 'default') }}"
