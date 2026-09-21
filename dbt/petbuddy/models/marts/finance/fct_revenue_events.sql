@@ -12,8 +12,10 @@ select
     ab_version,
     revenue_type,
     revenue_source,
-    round(revenue_amount, 6) as revenue_amount
-from {{ ref('int_events__revenue') }}
+    round(revenue_amount, 6) as revenue_amount,
+    ifNull(pc.campaign_name, '(unknown)') as marketing_campaign
+from {{ ref('int_events__revenue') }} r
+left join {{ ref('int_player_campaign') }} pc using (player_id)
 
 union all
 
@@ -30,6 +32,7 @@ select
     p.ab_version,
     'purchase'                                                  as revenue_type,
     'manual_backfill'                                           as revenue_source,
-    round(b.revenue_amount, 6)                                  as revenue_amount
+    round(b.revenue_amount, 6)                                  as revenue_amount,
+    ifNull(p.marketing_campaign, '(unknown)')                   as marketing_campaign
 from {{ ref('iap_backfill') }} b
 left join {{ ref('dim_players') }} p using (player_id)

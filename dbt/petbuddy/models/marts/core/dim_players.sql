@@ -60,6 +60,21 @@ agg as (
         max(event_name = 'revenue' and revenue_type = 'purchase')        as is_payer
     from events
     group by player_id
+),
+
+-- Атрибуты аккаунта (рекламная кампания установки + install-профиль) по мосту
+-- PlayerProfile.userId -> User. Есть только у подмножества игроков (в ben ~2k),
+-- у остальных campaign_name = NULL -> сворачивается в '(unknown)'.
+campaign as (
+    select
+        player_id,
+        campaign_name,
+        install_country,
+        platform      as install_platform,
+        first_version as install_version,
+        install_date,
+        is_test_profile
+    from {{ ref('int_player_campaign') }}
 )
 
 select
@@ -89,5 +104,15 @@ select
     ltv,
     purchases_count,
     ad_rewards_count,
-    is_payer
+    is_payer,
+
+    -- Атрибуты установки/аккаунта (маркетинг). '(unknown)' = аккаунт не найден в ben
+    -- или кампания не проставлена; для фильтра "All Traffic vs кампания" на дашбордах.
+    ifNull(c.campaign_name, '(unknown)')  as marketing_campaign,
+    c.install_country,
+    c.install_platform,
+    c.install_version,
+    c.install_date,
+    ifNull(c.is_test_profile, false)      as is_test_profile
 from agg
+left join campaign c using (player_id)

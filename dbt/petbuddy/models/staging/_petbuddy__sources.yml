@@ -56,4 +56,15 @@ sources:
           у IAP есть usdAmount (USD), originalAmount/originalCurrency, occurredAt.
           Ключ profileId = player_id. DAG ben_monetization_raw.
       - name: ben_user
-        description: "public.User из ben (JSON в data). DAG ben_user_raw."
+        description: >
+          public.User из ben (JSON в data). Аккаунт: id, externalId, appsFlyerId,
+          campaignName (рекламная кампания установки), country, platform,
+          firstVersion, createdAt. Ключ id != player_id — джойнится к игроку
+          через ben_player_profile.userId. DAG ben_user_raw.
+      - name: ben_player_profile
+        description: >
+          public.PlayerProfile из ben (JSON в data). Мост игрок<->аккаунт:
+          id (cuid) = player_id в событиях = profileId в monetization,
+          userId = ben_user.id. Поля: id, userId, nickname, serverId, isTest,
+          power, lastUpdate. Через него campaignName из User цепляется к player_id.
+          DAG ben_player_profile_raw.
