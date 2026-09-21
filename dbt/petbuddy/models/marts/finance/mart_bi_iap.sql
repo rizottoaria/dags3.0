@@ -25,6 +25,8 @@ pl as (
         marketing_campaign,
         ifNull(country_name, '(unknown)')                  as country,
         ifNull(app_version, '(unknown)')                   as app_version,
+        ifNull(install_platform, '(unknown)')              as install_platform,
+        install_date,
         coalesce(install_date, first_seen_date)            as install_day
     from {{ ref('dim_players') }}
 )
@@ -35,6 +37,8 @@ select
     ifNull(p.marketing_campaign, '(unknown)')              as marketing_campaign,
     p.country,
     p.app_version,
+    p.install_platform,
+    p.install_date,
     {{ lifetime_bucket('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_bucket,
     {{ lifetime_order('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_order,
     i.usd_amount,

@@ -32,6 +32,8 @@ select
     ifNull(dp.marketing_campaign, '(unknown)')                    as marketing_campaign,
     ifNull(pd.country, ifNull(dp.country_name, '(unknown)'))      as country,
     ifNull(pd.app_version, ifNull(dp.app_version, '(unknown)'))   as app_version,
+    ifNull(dp.install_platform, '(unknown)')                      as install_platform,
+    dp.install_date,
     {{ lifetime_bucket('pd.dsr') }}                               as lifetime_bucket,
     {{ lifetime_order('pd.dsr') }}                                as lifetime_order,
     (pd.event_date = dp.first_seen_date)                          as is_new_install

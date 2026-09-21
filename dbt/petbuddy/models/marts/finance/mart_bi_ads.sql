@@ -28,6 +28,8 @@ select
     ifNull(pc.campaign_name, '(unknown)')          as marketing_campaign,
     ifNull(e.country, '(unknown)')                 as country,
     ifNull(e.app_version, '(unknown)')             as app_version,
+    ifNull(pc.platform, '(unknown)')               as install_platform,
+    pc.install_date,
     {{ lifetime_bucket('e.dsr') }}                 as lifetime_bucket,
     {{ lifetime_order('e.dsr') }}                  as lifetime_order,
     ifNull(e.placement, '(unknown)')               as placement,
