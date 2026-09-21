@@ -31,7 +31,7 @@ pl as (
 
 select
     i.purchase_date                                        as event_date,
-    i.player_id,
+    i.player_id                                            as player_id,
     ifNull(p.marketing_campaign, '(unknown)')              as marketing_campaign,
     p.country,
     p.app_version,
