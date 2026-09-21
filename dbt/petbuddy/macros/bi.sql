@@ -5,10 +5,10 @@
 {% macro lifetime_bucket(days_col) -%}
   multiIf(
     {{ days_col }} is null, '(unknown)',
-    {{ days_col }} = 0,  'D0',
-    {{ days_col }} <= 3, 'D1-3',
-    {{ days_col }} <= 7, 'D4-7',
-    {{ days_col }} <= 14,'D8-14',
+    {{ days_col }} = 0,  'D00',
+    {{ days_col }} <= 3, 'D01-03',
+    {{ days_col }} <= 7, 'D04-07',
+    {{ days_col }} <= 14,'D08-14',
     {{ days_col }} <= 30,'D15-30',
     'D31+')
 {%- endmacro %}
