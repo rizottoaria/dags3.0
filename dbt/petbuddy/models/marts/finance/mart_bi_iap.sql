@@ -9,9 +9,9 @@
     Атрибуты игрока (кампания/страна/версия/install) — из dim_players. -#}
 
 with iap as (
-    select player_id, purchase_date, usd_amount
+    select player_id, assumeNotNull(purchase_date) as purchase_date, usd_amount
     from {{ ref('int_iap_usd') }}
-    where usd_amount is not null
+    where usd_amount is not null and purchase_date is not null
 ),
 
 first_purchase as (
