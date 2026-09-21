@@ -216,3 +216,119 @@ models:
         description: pu_cum / cohort_size (конверсия в платящего к дню).
       - name: iap_usd_cum
         description: Накопленная IAP-выручка USD к этому дню.
+
+  # ===========================================================================
+  # BI-витрины монетизации/экономики (дашборды LiveOps Monetization Overview и
+  # Cohort Economy в Superset). Все — "tidy" факты с измерениями
+  # marketing_campaign / country / app_version / lifetime_bucket, Superset агрегирует.
+  # ===========================================================================
+  - name: mart_bi_activity
+    description: >
+      Активность на грейне игрок-день (одна строка = игрок активен в этот день).
+      Для DAU/WAU/MAU (uniqExact(player_id) за день/окно) и знаменателя "per active
+      user". Измерения: marketing_campaign, country, app_version, lifetime_bucket,
+      is_new_install. Источник — petbuddy.events (FINAL).
+    columns:
+      - name: event_date
+        description: Календарный день активности.
+      - name: player_id
+        description: Игрок (= profileId).
+      - name: marketing_campaign
+        description: Рекламная кампания установки ('(unknown)' — нет аккаунта в ben/пусто).
+      - name: country
+        description: Страна (из событий, fallback dim_players).
+      - name: app_version
+        description: Версия приложения в этот день.
+      - name: lifetime_bucket
+        description: Возраст игрока (D0/D1-3/D4-7/D8-14/D15-30/D31+) по daysSinceRegistration.
+      - name: lifetime_order
+        description: Порядковый ключ бакета для сортировки оси.
+      - name: is_new_install
+        description: true, если день = день первого появления игрока (новая установка).
+
+  - name: mart_bi_gem_flows
+    description: >
+      Движение Gems (Currency_Gems) на грейне события: приход (in) / расход (out).
+      Питает Gem Sinks, Gem Sources и их разрез по Player Lifetime. gem_source —
+      raw game-source (properties.source), category — грубый rollup (эвристика).
+      Метрики: sum(gems), uniqExact(player_id) — spenders/receivers, count() — события.
+    columns:
+      - name: event_date
+        description: День события экономики.
+      - name: player_id
+        description: Игрок.
+      - name: marketing_campaign
+        description: Рекламная кампания установки.
+      - name: country
+        description: Страна события.
+      - name: app_version
+        description: Версия приложения.
+      - name: lifetime_bucket
+        description: Возраст игрока на момент события.
+      - name: lifetime_order
+        description: Порядковый ключ бакета.
+      - name: direction
+        description: "in = получение Gems (source), out = трата (sink)."
+      - name: gem_source
+        description: Raw источник/сток (properties.source), напр. AdventurerSupplyBox, Revive.
+      - name: category
+        description: Грубая бизнес-категория (Gacha/Revive/Energy/Shop/...) — эвристика, правится в macros/bi.sql.
+      - name: gems
+        description: Абсолютная величина изменения Gems (>=0).
+
+  - name: mart_bi_ads
+    description: >
+      Просмотры Rewarded Ads на грейне события (revenue, type=ad_reward). Одна строка =
+      один просмотр. placement = properties.source. Питает Rewarded Ads и Rewarded Ads
+      by Lifetime. Метрики: sum(ad_view) — показы, uniqExact(player_id) — зрители,
+      sum(ad_revenue) — доход, ad_revenue/views*1000 — eCPM.
+    columns:
+      - name: event_date
+        description: День показа рекламы.
+      - name: player_id
+        description: Игрок-зритель.
+      - name: marketing_campaign
+        description: Рекламная кампания установки.
+      - name: country
+        description: Страна.
+      - name: app_version
+        description: Версия приложения.
+      - name: lifetime_bucket
+        description: Возраст игрока на момент показа.
+      - name: lifetime_order
+        description: Порядковый ключ бакета.
+      - name: placement
+        description: Место показа / за что награда (properties.source).
+      - name: ad_view
+        description: Константа 1 (один просмотр) — для sum как счётчик показов.
+      - name: ad_revenue
+        description: Доход с показа в USD (0, если не пришёл).
+
+  - name: mart_bi_iap
+    description: >
+      Покупки IAP в USD на грейне транзакции (источник int_iap_usd — гибрид
+      monetization + конверсия старых событий). Питает Summary.USD, Real Money
+      Purchases (агрегатно, SKU в данных нет) и IAP by Lifetime. Метрики:
+      sum(usd_amount) — выручка, uniqExact(player_id) — покупатели, sum(purchase_cnt) —
+      покупки, countIf(is_first_purchase) — первые покупки.
+    columns:
+      - name: event_date
+        description: Дата покупки.
+      - name: player_id
+        description: Покупатель.
+      - name: marketing_campaign
+        description: Рекламная кампания установки.
+      - name: country
+        description: Страна (dim_players).
+      - name: app_version
+        description: Версия приложения (dim_players).
+      - name: lifetime_bucket
+        description: Возраст игрока на момент покупки (purchase_date - install_day).
+      - name: lifetime_order
+        description: Порядковый ключ бакета.
+      - name: usd_amount
+        description: Сумма покупки в USD.
+      - name: purchase_cnt
+        description: Константа 1 (одна покупка).
+      - name: is_first_purchase
+        description: true, если это первая покупка игрока (по дате).
