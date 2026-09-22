@@ -46,24 +46,45 @@ anchor as (
     select cohort_version, country, obs_ad as anch_ad, obs_tot as anch_tot
     from observed where d = {{ anchor }}
 ),
-days as ( select toInt32(arrayJoin(range(1,61))) as d )
+days as ( select toInt32(arrayJoin(range(1,61))) as d ),
+
+fc as (
+    select
+        r.cohort_version as cohort_version,
+        r.country        as country,
+        d.d              as day_since_install,
+        r.fit_points,
+        o.obs_ad  as observed_cum_ad_arpu,
+        o.obs_tot as observed_cum_arpu,
+        greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))) as forecast_cum_ad_arpu,
+        greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))) as forecast_cum_arpu,
+        multiIf(d.d > m.last_obs_day, greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))), o.obs_ad)  as best_cum_ad_arpu,
+        multiIf(d.d > m.last_obs_day, greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))), o.obs_tot) as best_cum_arpu,
+        p.prophet_cum_ad_arpu as prophet_cum_ad_arpu,
+        p.prophet_cum_arpu as prophet_cum_arpu,
+        toUInt8(d.d > m.last_obs_day) as is_forecast
+    from reg r
+    cross join days d
+    inner join maxobs m on m.cohort_version=r.cohort_version and m.country=r.country
+    inner join anchor a on a.cohort_version=r.cohort_version and a.country=r.country
+    left join observed o on o.cohort_version=r.cohort_version and o.country=r.country and o.d=d.d
+    left join petbuddy_clean.arpu_prophet_raw p on p.cohort_version=r.cohort_version and p.country=r.country and p.day_since_install=d.d
+)
+
 select
-    r.cohort_version as cohort_version,
-    r.country        as country,
-    d.d              as day_since_install,
-    r.fit_points,
-    o.obs_ad  as observed_cum_ad_arpu,
-    o.obs_tot as observed_cum_arpu,
-    greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))) as forecast_cum_ad_arpu,
-    greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))) as forecast_cum_arpu,
-    multiIf(d.d > m.last_obs_day, greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))), o.obs_ad)  as best_cum_ad_arpu,
-    multiIf(d.d > m.last_obs_day, greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))), o.obs_tot) as best_cum_arpu,
-    p.prophet_cum_ad_arpu as prophet_cum_ad_arpu,
-    p.prophet_cum_arpu as prophet_cum_arpu,
-    toUInt8(d.d > m.last_obs_day) as is_forecast
-from reg r
-cross join days d
-inner join maxobs m on m.cohort_version=r.cohort_version and m.country=r.country
-inner join anchor a on a.cohort_version=r.cohort_version and a.country=r.country
-left join observed o on o.cohort_version=r.cohort_version and o.country=r.country and o.d=d.d
-left join petbuddy_clean.arpu_prophet_raw p on p.cohort_version=r.cohort_version and p.country=r.country and p.day_since_install=d.d
+    *,
+    -- IAP = total - ad (для каждого метода)
+    greatest(0, observed_cum_arpu   - observed_cum_ad_arpu)  as observed_cum_iap_arpu,
+    greatest(0, forecast_cum_arpu   - forecast_cum_ad_arpu)  as forecast_cum_iap_arpu,
+    greatest(0, best_cum_arpu       - best_cum_ad_arpu)      as best_cum_iap_arpu,
+    greatest(0, prophet_cum_arpu    - prophet_cum_ad_arpu)   as prophet_cum_iap_arpu,
+    -- Prophet, «прижатый» к факту на наблюдаемых днях: факт до last_obs, Prophet дальше.
+    -- Так линия/сводка не расходится с фактом там, где день уже измерен (D30 = факт).
+    if(is_forecast, prophet_cum_ad_arpu, observed_cum_ad_arpu)                          as prophet_obs_cum_ad_arpu,
+    if(is_forecast, prophet_cum_arpu, observed_cum_arpu)                                as prophet_obs_cum_arpu,
+    if(is_forecast, greatest(0, prophet_cum_arpu - prophet_cum_ad_arpu),
+                    greatest(0, observed_cum_arpu - observed_cum_ad_arpu))             as prophet_obs_cum_iap_arpu,
+    -- Явные алиасы для чартов (Superset): forecast_iap / observed_iap
+    greatest(0, observed_cum_arpu - observed_cum_ad_arpu)   as observed_iap,
+    greatest(0, best_cum_arpu     - best_cum_ad_arpu)       as forecast_iap
+from fc
