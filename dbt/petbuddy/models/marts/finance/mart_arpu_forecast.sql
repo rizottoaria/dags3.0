@@ -48,44 +48,62 @@ anchor as (
 ),
 days as ( select toInt32(arrayJoin(range(1,61))) as d ),
 
+-- Тримминг последнего наблюдаемого дня: если на нём факт резко проседает (>10% ниже
+-- предыдущего дня) — это артефакт maturity-adjusted (меняется состав доживших когорт).
+-- Такой день на ЛИНИИ факта не показываем (в сводке best/prophet_obs остаётся сырой факт).
+obs_win as (
+    select cohort_version, country, d, obs_tot,
+           row_number() over (partition by cohort_version, country order by d desc) as rn
+    from observed
+),
+obs_trim as (
+    select cohort_version, country,
+           if(anyIf(obs_tot, rn = 2) > 0
+              and anyIf(obs_tot, rn = 1) < anyIf(obs_tot, rn = 2) * 0.90,
+              anyIf(d, rn = 1), toInt32(-1)) as trim_day
+    from obs_win
+    group by cohort_version, country
+),
+
 fc as (
     select
         r.cohort_version as cohort_version,
         r.country        as country,
         d.d              as day_since_install,
         r.fit_points,
-        -- факт живёт только до последнего наблюдаемого дня; дальше NULL (а не 0 из
-        -- left join при join_use_nulls=0), чтобы линия факта чисто обрывалась, без падения в ноль
-        if(d.d > m.last_obs_day, null, o.obs_ad)  as observed_cum_ad_arpu,
-        if(d.d > m.last_obs_day, null, o.obs_tot) as observed_cum_arpu,
+        -- факт для ЛИНИИ: NULL после last_obs_day (чистый обрыв, без падения в ноль) и
+        -- NULL на trim_day (резкий провал последнего дня — не показываем)
+        if(d.d > m.last_obs_day or d.d = t.trim_day, null, o.obs_ad)  as observed_cum_ad_arpu,
+        if(d.d > m.last_obs_day or d.d = t.trim_day, null, o.obs_tot) as observed_cum_arpu,
         greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))) as forecast_cum_ad_arpu,
         greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))) as forecast_cum_arpu,
         multiIf(d.d > m.last_obs_day, greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))), o.obs_ad)  as best_cum_ad_arpu,
         multiIf(d.d > m.last_obs_day, greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))), o.obs_tot) as best_cum_arpu,
         p.prophet_cum_ad_arpu as prophet_cum_ad_arpu,
         p.prophet_cum_arpu as prophet_cum_arpu,
+        -- Prophet, «прижатый» к факту: на наблюдаемых днях СЫРОЙ факт (не тримленный),
+        -- чтобы сводка D30 оставалась фактом; на прогнозных днях — Prophet.
+        if(d.d > m.last_obs_day, p.prophet_cum_ad_arpu, o.obs_ad)  as prophet_obs_cum_ad_arpu,
+        if(d.d > m.last_obs_day, p.prophet_cum_arpu, o.obs_tot)    as prophet_obs_cum_arpu,
+        if(d.d > m.last_obs_day, greatest(0, p.prophet_cum_arpu - p.prophet_cum_ad_arpu),
+                                 greatest(0, o.obs_tot - o.obs_ad)) as prophet_obs_cum_iap_arpu,
         toUInt8(d.d > m.last_obs_day) as is_forecast
     from reg r
     cross join days d
     inner join maxobs m on m.cohort_version=r.cohort_version and m.country=r.country
     inner join anchor a on a.cohort_version=r.cohort_version and a.country=r.country
     left join observed o on o.cohort_version=r.cohort_version and o.country=r.country and o.d=d.d
+    left join obs_trim t on t.cohort_version=r.cohort_version and t.country=r.country
     left join petbuddy_clean.arpu_prophet_raw p on p.cohort_version=r.cohort_version and p.country=r.country and p.day_since_install=d.d
 )
 
 select
     *,
-    -- IAP = total - ad (для каждого метода)
+    -- IAP = total - ad (для каждого метода). observed_iap наследует тримминг факта.
     if(isNull(observed_cum_arpu), null, greatest(0, observed_cum_arpu - observed_cum_ad_arpu)) as observed_cum_iap_arpu,
     greatest(0, forecast_cum_arpu   - forecast_cum_ad_arpu)  as forecast_cum_iap_arpu,
     greatest(0, best_cum_arpu       - best_cum_ad_arpu)      as best_cum_iap_arpu,
     greatest(0, prophet_cum_arpu    - prophet_cum_ad_arpu)   as prophet_cum_iap_arpu,
-    -- Prophet, «прижатый» к факту на наблюдаемых днях: факт до last_obs, Prophet дальше.
-    -- Так линия/сводка не расходится с фактом там, где день уже измерен (D30 = факт).
-    if(is_forecast, prophet_cum_ad_arpu, observed_cum_ad_arpu)                          as prophet_obs_cum_ad_arpu,
-    if(is_forecast, prophet_cum_arpu, observed_cum_arpu)                                as prophet_obs_cum_arpu,
-    if(is_forecast, greatest(0, prophet_cum_arpu - prophet_cum_ad_arpu),
-                    greatest(0, observed_cum_arpu - observed_cum_ad_arpu))             as prophet_obs_cum_iap_arpu,
     -- Явные алиасы для чартов (Superset): forecast_iap / observed_iap
     if(isNull(observed_cum_arpu), null, greatest(0, observed_cum_arpu - observed_cum_ad_arpu)) as observed_iap,
     greatest(0, best_cum_arpu     - best_cum_ad_arpu)       as forecast_iap
