@@ -20,12 +20,13 @@ with ad as (
 
 iap as (
     select
-        purchase_date                  as event_date,
+        assumeNotNull(purchase_date)   as event_date,
         count()                        as transactions,
         uniqExact(player_id)           as paying_users,
         sum(usd_amount)                as revenue
     from {{ ref('int_iap_usd') }}
-    group by purchase_date
+    where purchase_date is not null
+    group by assumeNotNull(purchase_date)
 ),
 
 unioned as (
