@@ -34,8 +34,11 @@ select
     toInt32OrNull(properties.allChapterTries::String)       as all_chapter_tries,
 
     -- Атрибуты монетизации (заполнены только у event_name = 'revenue')
-    toFloat64OrNull(properties.revenue::String)             as revenue_amount,
+    -- replaceAll(',', '.') — клиент шлёт локализованную сумму ("145,93" в ru-RU/UAH),
+    -- иначе toFloat64OrNull даёт NULL и покупка теряется в fct_revenue_events.
+    toFloat64OrNull(replaceAll(properties.revenue::String, ',', '.')) as revenue_amount,
     nullIf(properties.type::String, '')                     as revenue_type,
+    nullIf(properties.currency::String, '')                 as revenue_currency,
     nullIf(properties.source::String, '')                   as action_source,
 
     -- Сырые JSON на случай дальнейшего разбора в intermediate-слое

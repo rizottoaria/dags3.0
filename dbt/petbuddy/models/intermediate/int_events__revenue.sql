@@ -10,6 +10,7 @@ select
     ab_version,
     revenue_type,
     action_source     as revenue_source,
+    revenue_currency,
     revenue_amount
 from {{ ref('stg_events') }}
 where event_name = 'revenue'

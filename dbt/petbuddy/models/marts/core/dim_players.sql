@@ -26,7 +26,7 @@ with events as (
         nullIf(properties.version::String, '')              as app_version,
         nullIf(properties.abVersion::String, '')            as ab_version,
         toInt32OrNull(properties.chapter::String)           as chapter,
-        toFloat64OrNull(properties.revenue::String)         as revenue_amount,
+        toFloat64OrNull(replaceAll(properties.revenue::String, ',', '.')) as revenue_amount,
         nullIf(properties.type::String, '')                 as revenue_type
     from {{ source('petbuddy', 'events') }} final
 ),

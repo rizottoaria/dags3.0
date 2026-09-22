@@ -18,15 +18,25 @@ models:
           - unique
 
   - name: fct_revenue_events
-    description: "Факт платёжных событий (одна строка = один платёж)."
+    description: >
+      Факт платёжных событий (одна строка = один платёж). revenue_amount у purchase —
+      в ИСХОДНОЙ валюте (см. currency); складывать между валютами нельзя, для агрегатов
+      revenue_amount_usd. ad_reward — уже в USD.
     columns:
       - name: event_id
         data_tests:
           - not_null
           - unique
+      - name: currency
+        description: "Валюта revenue_amount ('USD' для ad_reward и бэкфилла; исходная валюта покупки иначе)."
+      - name: revenue_amount_usd
+        description: "Сумма в USD: ad_reward = как есть; purchase = конверсия по int_currency_rates_usd."
 
   - name: mart_revenue_daily
-    description: "Выручка по дням и типу с ARPU/ARPPU."
+    description: >
+      Выручка по дням и типу в USD с ARPU/ARPPU. ad_reward из fct_revenue_events (USD),
+      purchase из int_iap_usd (авторитетный USD-гибрид) — сырые purchase в исходной
+      валюте не суммируются.
     columns:
       - name: event_date
         data_tests:
