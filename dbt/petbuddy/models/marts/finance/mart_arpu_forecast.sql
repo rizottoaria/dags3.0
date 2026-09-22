@@ -54,8 +54,10 @@ fc as (
         r.country        as country,
         d.d              as day_since_install,
         r.fit_points,
-        o.obs_ad  as observed_cum_ad_arpu,
-        o.obs_tot as observed_cum_arpu,
+        -- факт живёт только до последнего наблюдаемого дня; дальше NULL (а не 0 из
+        -- left join при join_use_nulls=0), чтобы линия факта чисто обрывалась, без падения в ноль
+        if(d.d > m.last_obs_day, null, o.obs_ad)  as observed_cum_ad_arpu,
+        if(d.d > m.last_obs_day, null, o.obs_tot) as observed_cum_arpu,
         greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))) as forecast_cum_ad_arpu,
         greatest(0, a.anch_tot + r.b_tot * (log(d.d) - log({{ anchor }}))) as forecast_cum_arpu,
         multiIf(d.d > m.last_obs_day, greatest(0, a.anch_ad  + r.b_ad  * (log(d.d) - log({{ anchor }}))), o.obs_ad)  as best_cum_ad_arpu,
@@ -74,7 +76,7 @@ fc as (
 select
     *,
     -- IAP = total - ad (для каждого метода)
-    greatest(0, observed_cum_arpu   - observed_cum_ad_arpu)  as observed_cum_iap_arpu,
+    if(isNull(observed_cum_arpu), null, greatest(0, observed_cum_arpu - observed_cum_ad_arpu)) as observed_cum_iap_arpu,
     greatest(0, forecast_cum_arpu   - forecast_cum_ad_arpu)  as forecast_cum_iap_arpu,
     greatest(0, best_cum_arpu       - best_cum_ad_arpu)      as best_cum_iap_arpu,
     greatest(0, prophet_cum_arpu    - prophet_cum_ad_arpu)   as prophet_cum_iap_arpu,
@@ -85,6 +87,6 @@ select
     if(is_forecast, greatest(0, prophet_cum_arpu - prophet_cum_ad_arpu),
                     greatest(0, observed_cum_arpu - observed_cum_ad_arpu))             as prophet_obs_cum_iap_arpu,
     -- Явные алиасы для чартов (Superset): forecast_iap / observed_iap
-    greatest(0, observed_cum_arpu - observed_cum_ad_arpu)   as observed_iap,
+    if(isNull(observed_cum_arpu), null, greatest(0, observed_cum_arpu - observed_cum_ad_arpu)) as observed_iap,
     greatest(0, best_cum_arpu     - best_cum_ad_arpu)       as forecast_iap
 from fc
