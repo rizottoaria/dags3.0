@@ -29,9 +29,9 @@ first_rate as (   -- самый ранний курс валюты (fallback д�
 )
 
 select
-    ev.event_id,
-    ev.player_id,
-    ev.session_id,
+    ev.event_id   as event_id,
+    ev.player_id  as player_id,
+    ev.session_id as session_id,
     ev.event_at,
     ev.event_date,
     ev.country,
