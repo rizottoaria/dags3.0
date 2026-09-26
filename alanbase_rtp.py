@@ -10,6 +10,9 @@ rizottoaria__alanbase_rtp
   в колонки, полный ответ API лежит в raw (JSON-текст).
 - alanbase_rtp.daily_stats  — клики и конверсии по статусам за день
   (/v1/admin/statistic/common, group_by=day, timezone Europe/Belgrade, currency USD). Ключ day.
+- alanbase_rtp.daily_stats_by — то же в разрезе day × измерение (partner/offer/country/os/landing/sub1).
+  API умеет только один group_by за запрос, поэтому по запросу на день × измерение;
+  окно короче (BREAKDOWN_LOOKBACK_DAYS), ретро — через conf.since. Ключ (day, dim, dim_id).
 
 Статус конверсии меняется задним числом (HOLD -> CONFIRMED/REJECTED), поэтому каждый прогон
 перечитывает скользящее окно LOOKBACK_DAYS (но не раньше START_DATE) и дописывает версии строк;
@@ -33,6 +36,8 @@ PER_PAGE = 1000
 CURRENCY = "USD"
 CONV_TZ = "UTC"
 DAILY_TZ = "Europe/Belgrade"
+BREAKDOWN_DIMS = ("partner", "offer", "country", "os", "landing", "sub1")
+BREAKDOWN_LOOKBACK_DAYS = 7
 
 CONV_STR = ["tid", "status", "decline_reason", "payout_currency", "revenue_currency", "value_currency",
             *[f"sub{i}" for i in range(1, 11)], *[f"custom{i}" for i in range(1, 6)],
@@ -83,6 +88,31 @@ CREATE TABLE IF NOT EXISTS {CH_DB}.daily_stats (
 ORDER BY day
 COMMENT 'Alanbase rtpbetpartners: клики и конверсии по статусам за день (день по Europe/Belgrade, суммы USD). DAG rizottoaria__alanbase_rtp'
 """
+
+
+DAILY_BY_DDL = f"""
+CREATE TABLE IF NOT EXISTS {CH_DB}.daily_stats_by (
+    day                Date,
+    dim                LowCardinality(String),
+    dim_id             String,
+    dim_label          String,
+    click_count        UInt64,
+    click_unique_count UInt64,
+    {", ".join(f"{c} {'UInt64' if c.endswith('_count') else 'Decimal(18, 4)'}" for c in DAILY_METRIC_COLS)},
+    _loaded_at         DateTime64(3, 'UTC') DEFAULT now64(3)
+) ENGINE = ReplacingMergeTree(_loaded_at)
+ORDER BY (day, dim, dim_id)
+COMMENT 'Alanbase rtpbetpartners: клики и конверсии за день в разрезе dim (partner/offer/country/os/landing/sub1), день по Europe/Belgrade, USD. DAG rizottoaria__alanbase_rtp'
+"""
+
+
+def _stats_row(item: dict) -> dict:
+    conv = item.get("conversions") or {}
+    return {
+        "click_count": item.get("click_count") or 0,
+        "click_unique_count": item.get("click_unique_count") or 0,
+        **{f"{s}_{m}": (conv.get(s) or {}).get(m) or 0 for s in STATUSES for m in METRICS},
+    }
 
 
 def _api_get(endpoint: str, params: dict) -> dict:
@@ -232,21 +262,53 @@ def alanbase_rtp():
                 day = next((g["id"] for g in item.get("group_fields", []) if g["group_field"] == "day"), None)
                 if not day:
                     continue
-                conv = item.get("conversions") or {}
-                rows.append({
-                    "day": day,
-                    "click_count": item.get("click_count") or 0,
-                    "click_unique_count": item.get("click_unique_count") or 0,
-                    **{f"{s}_{m}": (conv.get(s) or {}).get(m) or 0 for s in STATUSES for m in METRICS},
-                })
+                rows.append({"day": day, **_stats_row(item)})
             cur = win_end + timedelta(days=1)
 
         _ch_load("daily_stats", DAILY_DDL, rows)
         print(f"daily_stats: {len(rows)} дней ({start:%Y-%m-%d}..{end:%Y-%m-%d})")
         return len(rows)
 
+    @task(execution_timeout=timedelta(minutes=45))
+    def load_daily_stats_by(**context) -> int:
+        from zoneinfo import ZoneInfo
+
+        conf = context["dag_run"].conf or {}
+        end = datetime.now(ZoneInfo(DAILY_TZ)).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+        if conf.get("since"):
+            start = datetime.strptime(conf["since"], "%Y-%m-%d")
+        else:
+            start = max(datetime.strptime(START_DATE, "%Y-%m-%d"), end - timedelta(days=BREAKDOWN_LOOKBACK_DAYS))
+        rows = []
+        day = start
+        while day <= end:
+            for dim in BREAKDOWN_DIMS:
+                payload = _api_get("common", {
+                    "timezone": DAILY_TZ,
+                    "date_from": day.strftime("%Y-%m-%d"),
+                    "date_to": day.strftime("%Y-%m-%d"),
+                    "currency_code": CURRENCY,
+                    "group_by": dim,
+                })
+                for item in payload.get("data") or []:
+                    g = next((g for g in item.get("group_fields", []) if g["group_field"] == dim), None)
+                    if g is None:
+                        continue
+                    rows.append({
+                        "day": day.strftime("%Y-%m-%d"), "dim": dim,
+                        "dim_id": "" if g.get("id") is None else str(g["id"]),
+                        "dim_label": g.get("label") or "",
+                        **_stats_row(item),
+                    })
+            day += timedelta(days=1)
+
+        _ch_load("daily_stats_by", DAILY_BY_DDL, rows)
+        print(f"daily_stats_by: {len(rows)} строк ({start:%Y-%m-%d}..{end:%Y-%m-%d})")
+        return len(rows)
+
     load_conversions()
     load_daily_stats()
+    load_daily_stats_by()
 
 
 alanbase_rtp()
