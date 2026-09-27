@@ -65,6 +65,9 @@ def _get_catalog(access_key, secret_key):
 default_args = {
     "owner": "rizottoaria",
     "on_failure_callback": on_failure_callback,
+    # сеть 185 -> 91 (MinIO/Iceberg REST) периодически рвёт соединения
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
 }
 
 
@@ -179,17 +182,13 @@ def currency_rates_etl():
             )
         )
 
+        from pyiceberg.exceptions import NoSuchTableError
+
+        # Создаём таблицу только если её реально нет; сетевые ошибки пробрасываем
+        # (иначе обрыв соединения превращался в create_table -> 409 AlreadyExists).
         try:
             table = catalog.load_table(table_id)
-            print("Table exists, upserting...")
-            table.upsert(
-                arrow_table,
-                join_cols=["business_date", "base_currency", "target_currency"],
-            )
-            print("Upsert done!")
-        except Exception as e:
-            if "AlreadyExists" in str(e) or "already exists" in str(e).lower():
-                raise
+        except NoSuchTableError as e:
             print("Creating table: " + str(e))
             table = catalog.create_table(
                 table_id,
@@ -202,6 +201,13 @@ def currency_rates_etl():
             )
             table.append(arrow_table)
             print("Created and loaded!")
+        else:
+            print("Table exists, upserting...")
+            table.upsert(
+                arrow_table,
+                join_cols=["business_date", "base_currency", "target_currency"],
+            )
+            print("Upsert done!")
 
         count = table.scan().to_arrow().num_rows
         print("Total rows: " + str(count))
