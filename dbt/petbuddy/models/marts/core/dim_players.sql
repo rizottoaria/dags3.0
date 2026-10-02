@@ -52,8 +52,10 @@ agg as (
         -- Атрибуты УСТАНОВКИ (первое известное значение): версия/страна, с которыми игрок
         -- пришёл. Когортные витрины группируют по ним, а не по текущим country/app_version —
         -- иначе обновившиеся (самые вовлечённые) игроки уезжают в когорту новой версии.
-        argMinIf(app_version, event_at, app_version is not null)  as first_app_version,
-        argMinIf(country, event_at, country is not null)          as first_country,
+        -- events.* — квалифицировано: алиасы app_version/country выше перекрывают колонки
+        -- (ClickHouse подставил бы агрегат в агрегат -> ILLEGAL_AGGREGATION)
+        argMinIf(events.app_version, events.event_at, events.app_version is not null) as first_app_version,
+        argMinIf(events.country, events.event_at, events.country is not null)         as first_country,
 
         -- Активность
         count()                                                as total_events,
