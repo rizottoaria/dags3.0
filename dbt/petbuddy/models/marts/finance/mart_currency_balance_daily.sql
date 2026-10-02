@@ -12,10 +12,18 @@
 -- toString(properties) (материализует весь JSON построчно) — по всей истории это
 -- упирается в лимит памяти ClickHouse. При обычном run обрабатываем только
 -- последние event_date (окно 2 дня), delete+insert по (event_date, currency)
--- заменяет эти дни. Полный пересбор: --full-refresh.
+-- заменяет эти дни.
+--
+-- Фильтр — по event_date (MATERIALIZED toDate(event_at), первый столбец ключа сортировки
+-- events): так ClickHouse отсекает гранулы. По toDate(event_at) отсечения НЕТ — каждый
+-- прогон сканировал всю таблицу (~30 мин).
+-- Пустая таблица: max() даёт 1970-01-01, а 1970-01-01 - 2 дня в Date переворачивается
+-- в 2149-06-05 -> фильтр ничего не находил и витрина 2,5 месяца оставалась пустой.
+-- Поэтому на пустой таблице берём только последние 2 дня; историю грузить помесячно
+-- (scripts/backfill_currency_balance.sql), не --full-refresh (вся история не влезает в память).
 with snapshots as (
     select
-        toDate(event_at) as event_date,
+        event_date,
         player_id,
         kv.1 as currency,
         kv.2 as balance
@@ -28,7 +36,7 @@ with snapshots as (
     where JSONExtractRaw(toString(properties), 'balanceSnapshot') != ''
 
     {% if is_incremental() %}
-      and toDate(event_at) >= (select max(event_date) from {{ this }}) - toIntervalDay(2)
+      and event_date >= (select if(count() = 0, today() - 2, max(event_date) - 2) from {{ this }})
     {% endif %}
 )
 
