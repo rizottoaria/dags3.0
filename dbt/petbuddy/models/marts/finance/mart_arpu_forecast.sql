@@ -1,49 +1,56 @@
-{{ config(materialized='table', tags=['marts','finance','bi']) }}
+{{ config(materialized='table', tags=['marts','finance','bi'],
+    pre_hook="ALTER TABLE petbuddy_clean.arpu_prophet_raw ADD COLUMN IF NOT EXISTS campaign String DEFAULT 'ALL'") }}
 {#- Прогноз накопительного ARPU на install (ad и total), D1..D60.
+    Сегмент = версия установки x страна (ALL/US/PH) x рекламная кампания (ALL / campaign).
     Наклон роста b — из лог-регрессии cum_arpu ~ a + b*ln(day) по ЧИСТОЙ fixed-cohort кривой
     (окно 1..H, H=least(14,возраст старшей когорты), когорты age>=H → монотонно).
     ЯКОРЕНИЕ: прогноз = observed(anchor=D7) + b*(ln(day)-ln(7)); так кривая непрерывна с фактом
-    и опирается на агрегат по ВСЕМ когортам, а не только по старым. Сегменты: версия + версия×страна. -#}
+    и опирается на агрегат по ВСЕМ когортам, а не только по старым. -#}
 {%- set anchor = 7 -%}
 
-with src as (
-    select cohort_version, 'ALL' as country, cohort_age_days, day_since_install, cohort_size, cum_ad_revenue, cum_total_revenue
-    from {{ ref('mart_cohort_daily') }}
-    union all
-    select cohort_version, country, cohort_age_days, day_since_install, cohort_size, cum_ad_revenue, cum_total_revenue
-    from {{ ref('mart_cohort_daily_country') }}
+{%- set min_installs = var('prophet_min_installs', 20) -%}
+
+with src as (   -- сегменты: версия установки x страна (ALL/US/PH) x кампания (ALL/campaign)
+    select cohort_version, country, campaign, cohort_age_days, day_since_install, cohort_size, cum_ad_revenue, cum_total_revenue
+    from {{ ref('mart_cohort_daily_campaign') }}
+    where (cohort_version, country, campaign) in (   -- мелкие сегменты (< min_installs установок) не прогнозируем
+        select cohort_version, country, campaign from {{ ref('mart_cohort_daily_campaign') }}
+        where day_since_install = 0
+        group by cohort_version, country, campaign
+        having sum(cohort_size) >= {{ min_installs }}
+    )
 ),
 seg_h as (
-    select cohort_version, country, least(toInt32(14), toInt32(max(cohort_age_days))) as H
-    from src group by cohort_version, country
+    select cohort_version, country, campaign, least(toInt32(14), toInt32(max(cohort_age_days))) as H
+    from src group by cohort_version, country, campaign
 ),
 fit_pts as (
-    select s.cohort_version as cohort_version, s.country as country, s.day_since_install as d,
+    select s.cohort_version as cohort_version, s.country as country, s.campaign as campaign, s.day_since_install as d,
            sum(s.cum_ad_revenue)/sum(s.cohort_size)    as y_ad,
            sum(s.cum_total_revenue)/sum(s.cohort_size) as y_tot
-    from src s inner join seg_h h on s.cohort_version=h.cohort_version and s.country=h.country
+    from src s inner join seg_h h on s.cohort_version=h.cohort_version and s.country=h.country and s.campaign=h.campaign
     where s.cohort_age_days >= h.H and s.day_since_install between 1 and h.H
-    group by s.cohort_version, s.country, s.day_since_install
+    group by s.cohort_version, s.country, s.campaign, s.day_since_install
 ),
 reg as (
-    select cohort_version, country,
+    select cohort_version, country, campaign,
            (simpleLinearRegression(log(d), y_ad)).1  as b_ad,
            (simpleLinearRegression(log(d), y_tot)).1 as b_tot,
            count() as fit_points
-    from fit_pts group by cohort_version, country
+    from fit_pts group by cohort_version, country, campaign
 ),
 observed as (
-    select cohort_version, country, day_since_install as d,
+    select cohort_version, country, campaign, day_since_install as d,
            sum(cum_ad_revenue)/sum(cohort_size)    as obs_ad,
            sum(cum_total_revenue)/sum(cohort_size) as obs_tot
-    from src group by cohort_version, country, day_since_install
+    from src group by cohort_version, country, campaign, day_since_install
 ),
 maxobs as (
-    select cohort_version, country, least(toInt32(30), toInt32(max(cohort_age_days))) as last_obs_day
-    from src group by cohort_version, country
+    select cohort_version, country, campaign, least(toInt32(30), toInt32(max(cohort_age_days))) as last_obs_day
+    from src group by cohort_version, country, campaign
 ),
 anchor as (
-    select cohort_version, country, obs_ad as anch_ad, obs_tot as anch_tot
+    select cohort_version, country, campaign, obs_ad as anch_ad, obs_tot as anch_tot
     from observed where d = {{ anchor }}
 ),
 days as ( select toInt32(arrayJoin(range(1,61))) as d ),
@@ -52,23 +59,24 @@ days as ( select toInt32(arrayJoin(range(1,61))) as d ),
 -- предыдущего дня) — это артефакт maturity-adjusted (меняется состав доживших когорт).
 -- Такой день на ЛИНИИ факта не показываем (в сводке best/prophet_obs остаётся сырой факт).
 obs_win as (
-    select cohort_version, country, d, obs_tot,
-           row_number() over (partition by cohort_version, country order by d desc) as rn
+    select cohort_version, country, campaign, d, obs_tot,
+           row_number() over (partition by cohort_version, country, campaign order by d desc) as rn
     from observed
 ),
 obs_trim as (
-    select cohort_version, country,
+    select cohort_version, country, campaign,
            if(anyIf(obs_tot, rn = 2) > 0
               and anyIf(obs_tot, rn = 1) < anyIf(obs_tot, rn = 2) * 0.90,
               anyIf(d, rn = 1), toInt32(-1)) as trim_day
     from obs_win
-    group by cohort_version, country
+    group by cohort_version, country, campaign
 ),
 
 fc as (
     select
         r.cohort_version as cohort_version,
         r.country        as country,
+        r.campaign       as campaign,
         d.d              as day_since_install,
         r.fit_points,
         -- факт для ЛИНИИ: NULL после last_obs_day (чистый обрыв, без падения в ноль) и
@@ -90,11 +98,11 @@ fc as (
         toUInt8(d.d > m.last_obs_day) as is_forecast
     from reg r
     cross join days d
-    inner join maxobs m on m.cohort_version=r.cohort_version and m.country=r.country
-    inner join anchor a on a.cohort_version=r.cohort_version and a.country=r.country
-    left join observed o on o.cohort_version=r.cohort_version and o.country=r.country and o.d=d.d
-    left join obs_trim t on t.cohort_version=r.cohort_version and t.country=r.country
-    left join petbuddy_clean.arpu_prophet_raw p on p.cohort_version=r.cohort_version and p.country=r.country and p.day_since_install=d.d
+    inner join maxobs m on m.cohort_version=r.cohort_version and m.country=r.country and m.campaign=r.campaign
+    inner join anchor a on a.cohort_version=r.cohort_version and a.country=r.country and a.campaign=r.campaign
+    left join observed o on o.cohort_version=r.cohort_version and o.country=r.country and o.campaign=r.campaign and o.d=d.d
+    left join obs_trim t on t.cohort_version=r.cohort_version and t.country=r.country and t.campaign=r.campaign
+    left join petbuddy_clean.arpu_prophet_raw p on p.cohort_version=r.cohort_version and p.country=r.country and p.campaign=r.campaign and p.day_since_install=d.d
 )
 
 select

@@ -8,6 +8,10 @@ models:
         data_tests:
           - not_null
           - unique
+      - name: first_app_version
+        description: Версия установки (первая известная версия игрока) — ключ когорт в mart_cohort_*.
+      - name: first_country
+        description: Страна установки (первая известная страна игрока) — ключ когорт в mart_cohort_*.
 
   - name: mart_daily_active_users
     description: "DAU, новые/вернувшиеся, сессии, выручка и ARPDAU по дням."

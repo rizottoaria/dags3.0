@@ -49,6 +49,12 @@ agg as (
         argMaxIf(ab_version, event_at, ab_version is not null)    as ab_version,
         argMaxIf(chapter, event_at, chapter is not null)          as current_chapter,
 
+        -- Атрибуты УСТАНОВКИ (первое известное значение): версия/страна, с которыми игрок
+        -- пришёл. Когортные витрины группируют по ним, а не по текущим country/app_version —
+        -- иначе обновившиеся (самые вовлечённые) игроки уезжают в когорту новой версии.
+        argMinIf(app_version, event_at, app_version is not null)  as first_app_version,
+        argMinIf(country, event_at, country is not null)          as first_country,
+
         -- Активность
         count()                                                as total_events,
         uniq(session_id)                                       as total_sessions,
@@ -98,6 +104,8 @@ select
     app_version,
     ab_version,
     current_chapter,
+    first_app_version,
+    first_country,
 
     total_events,
     total_sessions,

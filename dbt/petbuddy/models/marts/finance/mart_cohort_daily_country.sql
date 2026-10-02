@@ -5,10 +5,11 @@
 {%- set countries = var('report_countries', ['US','PH']) -%}
 
 with coh as (
-    select player_id, app_version as cohort_version, country, first_seen_date as cohort_date
+    -- версия/страна УСТАНОВКИ (первые), не текущие
+    select player_id, first_app_version as cohort_version, first_country as country, first_seen_date as cohort_date
     from {{ ref('dim_players') }}
-    where app_version is not null and {{ version_gte('app_version', '1.0.22') }}
-      and country in ({{ "'" ~ countries | join("','") ~ "'" }})
+    where first_app_version is not null and {{ version_gte('first_app_version', '1.0.22') }}
+      and first_country in ({{ "'" ~ countries | join("','") ~ "'" }})
 ),
 sizes as (
     select cohort_version, country, cohort_date, count() as cohort_size

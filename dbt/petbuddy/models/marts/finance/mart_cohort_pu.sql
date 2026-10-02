@@ -23,11 +23,11 @@ with iap as (
 players as (
     select
         player_id,
-        ifNull(country, '(unknown)') as country,
-        app_version                  as cohort_version,
+        ifNull(first_country, '(unknown)') as country,          -- страна/версия УСТАНОВКИ
+        first_app_version                  as cohort_version,
         first_seen_date              as cohort_date
     from {{ ref('dim_players') }}
-    where app_version is not null and {{ version_gte('app_version', '1.0.22') }}
+    where first_app_version is not null and {{ version_gte('first_app_version', '1.0.22') }}
 ),
 j as (
     select

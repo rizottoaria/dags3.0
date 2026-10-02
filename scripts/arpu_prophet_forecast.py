@@ -1,12 +1,12 @@
 """
 arpu_prophet_forecast.py
 
-Считает Prophet-прогноз накопительного ARPU на install для версии 1.0.24
-(сегменты country = ALL / US / PH) и пишет результат в таблицу
+Считает Prophet-прогноз накопительного ARPU на install по сегментам
+версия установки × country (ALL / US / PH) × campaign (ALL / рекламная кампания) и пишет результат в таблицу
 `petbuddy_clean.arpu_prophet_raw`, которую подмешивает dbt-модель mart_arpu_forecast.
 
 Вход:  petbuddy_clean.mart_arpu_prophet_input (чистый fixed-cohort ряд + синтетическая дата ds).
-Выход: petbuddy_clean.arpu_prophet_raw (cohort_version, country, day_since_install,
+Выход: petbuddy_clean.arpu_prophet_raw (cohort_version, country, campaign, day_since_install,
                                         prophet_cum_ad_arpu, prophet_cum_arpu) за дни 1..HORIZON.
 
 Параметры Prophet: interval_width=0.8, без сезонностей (у накопительной кривой их нет), линейный тренд.
@@ -57,7 +57,7 @@ def main() -> int:
     import pandas as pd
     client = _client()
     src = client.query_df(
-        "SELECT cohort_version, country, day_since_install, ds, cum_ad_arpu, cum_arpu "
+        "SELECT cohort_version, country, campaign, day_since_install, ds, cum_ad_arpu, cum_arpu "
         "FROM petbuddy_clean.mart_arpu_prophet_input"
     )
     if src.empty:
@@ -66,28 +66,33 @@ def main() -> int:
 
     rows = []
     segs = []
-    for (version, country), g in src.groupby(["cohort_version", "country"]):
+    for (version, country, campaign), g in src.groupby(["cohort_version", "country", "campaign"]):
         g = g.sort_values("day_since_install")
         ad = _forecast_series(g, "cum_ad_arpu")
         tot = _forecast_series(g, "cum_arpu")
         if not ad and not tot:          # мало точек — сегмент пропускаем (prophet_* -> NULL)
             continue
         for day in range(1, HORIZON + 1):
-            rows.append([version, country, day, ad.get(day, 0.0), tot.get(day, 0.0)])
-        segs.append(f"{version}/{country}")
+            rows.append([version, country, campaign, day, ad.get(day, 0.0), tot.get(day, 0.0)])
+        segs.append(f"{version}/{country}/{campaign}")
     print(f"LOG === prophet: {len(rows)} строк, {len(segs)} сегментов: {sorted(segs)}")
 
     client.command(
         "CREATE TABLE IF NOT EXISTS petbuddy_clean.arpu_prophet_raw ("
-        "cohort_version String, country String, day_since_install Int32, "
+        "cohort_version String, country String, campaign String DEFAULT 'ALL', day_since_install Int32, "
         "prophet_cum_ad_arpu Float64, prophet_cum_arpu Float64) "
-        "ENGINE = MergeTree ORDER BY (cohort_version, country, day_since_install)"
+        "ENGINE = MergeTree ORDER BY (cohort_version, country, campaign, day_since_install)"
+    )
+    # таблица из старой схемы (без кампании) — докинуть колонку
+    client.command(
+        "ALTER TABLE petbuddy_clean.arpu_prophet_raw "
+        "ADD COLUMN IF NOT EXISTS campaign String DEFAULT 'ALL'"
     )
     client.command("TRUNCATE TABLE petbuddy_clean.arpu_prophet_raw")
     client.insert(
         "petbuddy_clean.arpu_prophet_raw",
         rows,
-        column_names=["cohort_version", "country", "day_since_install",
+        column_names=["cohort_version", "country", "campaign", "day_since_install",
                       "prophet_cum_ad_arpu", "prophet_cum_arpu"],
     )
     print("LOG === arpu_prophet_raw обновлена")

@@ -111,10 +111,31 @@ models:
         description: Сумма ad_rewards_count (avg на игрока = total_ad_rewards / players).
 
   # ---------------------------------------------------------------------------
+  - name: mart_cohort_daily_campaign
+    description: >
+      Когортная выручка (ad + IAP USD) по дню закупки в разрезе рекламной кампании — вход
+      прогноза ARPU. Грейн: версия установки x страна-сегмент (ALL/US/PH) x кампания-сегмент
+      (ALL / marketing_campaign) x cohort_date x day_since_install (0..30). Сегменты ALL
+      считаются внутри (arrayJoin): ALL/ALL = mart_cohort_daily, <страна>/ALL = mart_cohort_daily_country.
+      Кампания '(unknown)' = нет campaignName в ben (органика или потерянная атрибуция).
+    columns:
+      - name: campaign
+        description: Кампания установки (dim_players.marketing_campaign) или 'ALL' — все игроки сегмента.
+      - name: country
+        description: Страна установки (US/PH) или 'ALL'.
+      - name: cohort_size
+        description: Установки когорты (версия x страна x кампания x день закупки).
+      - name: cum_total_revenue
+        description: Накопленная выручка ad + IAP (USD) к day_since_install.
+      - name: arpu_cum
+        description: Накопленный ARPU на install для одной когорты (per-cohort).
+
+  # ---------------------------------------------------------------------------
   - name: mart_arpu_prophet_input
     description: >
       Вход для Prophet (Superset Predictive Analytics и DAG). Наблюдаемый накопительный
-      ARPU на install по дням жизни для 1.0.24 (ALL/US/PH). Maturity-adjusted: на каждый
+      ARPU на install по дням жизни по сегментам версия установки x страна (ALL/US/PH) x
+      кампания (ALL/campaign), из mart_cohort_daily_campaign. Maturity-adjusted: на каждый
       день берём все когорты, дожившие до него (максимум реальных точек до возраста версии),
       дни с installs < var prophet_min_installs (дефолт 20) отбрасываем как шум.
       Синтетическая дата ds = 2024-01-01 + day_since_install для Prophet.
@@ -132,7 +153,8 @@ models:
   - name: mart_arpu_forecast
     description: >
       Прогноз накопительного ARPU на install (ad и total) на D1..D60 для сегментов
-      версия (country=ALL) и версия x страна (US/PH). Два метода в одной витрине.
+      версия установки x страна (ALL/US/PH) x рекламная кампания (ALL / campaign); сегменты
+      меньше var prophet_min_installs установок не прогнозируются. Два метода в одной витрине.
       (1) ЛОГ-МОДЕЛЬ: наклон b из лог-регрессии cum_arpu ~ a + b*ln(day) по чистой
       fixed-cohort кривой (окно 1..H, H=least(14, возраст старшей когорты)); прогноз
       якорен на факте D7: forecast = observed(D7) + b*(ln day - ln 7).
@@ -141,6 +163,8 @@ models:
       best_* = факт где есть (day <= last_obs), иначе лог-прогноз. Prophet (линейный тренд)
       обычно выше лог-модели на длинном горизонте (не видит насыщения).
     columns:
+      - name: campaign
+        description: Рекламная кампания установки или 'ALL' (фильтр «РК» на дашборде 14).
       - name: day_since_install
         description: Горизонт прогноза (1..60).
       - name: observed_cum_ad_arpu

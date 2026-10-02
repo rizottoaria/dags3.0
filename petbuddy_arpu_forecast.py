@@ -1,11 +1,13 @@
 """
 rizottoaria__petbuddy_arpu_forecast
 
-Прогноз накопительного ARPU на install для версии 1.0.24 (сегменты ALL / US / PH),
+Прогноз накопительного ARPU на install по сегментам версия установки × страна (ALL / US / PH)
+× рекламная кампания (ALL / campaign),
 двумя методами: лог-модель (в dbt) и Prophet (в Python). Порядок задач:
 
   1) dbt_inputs      — пересобрать входные витрины прогноза
-                       (mart_cohort_daily, mart_cohort_daily_country, mart_arpu_prophet_input).
+                       (mart_cohort_daily, mart_cohort_daily_country, mart_cohort_daily_campaign,
+                        mart_arpu_prophet_input).
                        Апстримы (dim_players/stg_events/fct_revenue_events) должен собрать
                        основной DAG rizottoaria__petbuddy_dbt_marts — здесь они НЕ пересобираются.
   2) prophet_forecast — Prophet по mart_arpu_prophet_input -> petbuddy_clean.arpu_prophet_raw.
@@ -65,7 +67,8 @@ def petbuddy_arpu_forecast():
         env["DBT_LOG_PATH"] = LOG_DIR
         _run([DBT_BIN, "build", "--project-dir", PROJECT_DIR, "--profiles-dir", PROJECT_DIR,
               "--target", "dev", "--select",
-              "mart_cohort_daily", "mart_cohort_daily_country", "mart_arpu_prophet_input"],
+              "mart_cohort_daily", "mart_cohort_daily_country", "mart_cohort_daily_campaign",
+              "mart_arpu_prophet_input"],
              env, "dbt_inputs")
 
     @task(execution_timeout=timedelta(minutes=20))

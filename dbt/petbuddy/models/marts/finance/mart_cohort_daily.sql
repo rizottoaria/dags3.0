@@ -6,9 +6,10 @@
 {%- set versions = var('report_versions', ['1.0.24','1.0.22']) -%}
 
 with coh as (
-    select player_id, app_version as cohort_version, first_seen_date as cohort_date
+    -- версия УСТАНОВКИ (первая), не текущая: апдейт не переносит игрока в чужую когорту
+    select player_id, first_app_version as cohort_version, first_seen_date as cohort_date
     from {{ ref('dim_players') }}
-    where app_version is not null and {{ version_gte('app_version', '1.0.22') }}
+    where first_app_version is not null and {{ version_gte('first_app_version', '1.0.22') }}
 ),
 sizes as (
     select cohort_version, cohort_date, count() as cohort_size
