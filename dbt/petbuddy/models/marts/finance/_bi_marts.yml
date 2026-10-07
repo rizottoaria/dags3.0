@@ -352,6 +352,8 @@ models:
         description: Порядковый ключ бакета.
       - name: product
         description: Продукт (SKU) покупки без префикса lepta.games.ben. (adfree, chapter1, shoppacks.renewal2 …); '(unknown)' если пусто.
+      - name: placement
+        description: Раздел магазина, выведенный из SKU (ChapterPacks / RoulettePackShop / ShopPacks / DailyBenefits / AdFree / Other) — в событиях покупки placement не логируется.
       - name: usd_amount
         description: Сумма покупки в USD.
       - name: purchase_cnt

@@ -42,6 +42,16 @@ select
     {{ lifetime_bucket('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_bucket,
     {{ lifetime_order('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_order,
     i.product                                              as product,
+    -- placement покупки в событиях не логируется → раздел магазина выводим из SKU
+    -- (сверено с resource_top_up.source в момент покупки)
+    multiIf(
+        i.product like 'chapter%',                'ChapterPacks',
+        i.product like 'shoppacks.renewal%',      'RoulettePackShop',
+        i.product like 'shoppacks.%',             'ShopPacks',
+        i.product like 'dailybenefits.%',         'DailyBenefits',
+        i.product = 'adfree',                     'AdFree',
+        i.product = '(unknown)',                  '(unknown)',
+        'Other')                                           as placement,
     i.usd_amount,
     1                                                      as purchase_cnt,
     (i.purchase_date = f.first_purchase_date)              as is_first_purchase
