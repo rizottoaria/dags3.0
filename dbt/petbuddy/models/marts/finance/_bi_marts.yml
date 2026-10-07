@@ -332,7 +332,7 @@ models:
     description: >
       Покупки IAP в USD на грейне транзакции (источник int_iap_usd — гибрид
       monetization + конверсия старых событий). Питает Summary.USD, Real Money
-      Purchases (агрегатно, SKU в данных нет) и IAP by Lifetime. Метрики:
+      Purchases, IAP by Lifetime и разрез по продукту (product). Метрики:
       sum(usd_amount) — выручка, uniqExact(player_id) — покупатели, sum(purchase_cnt) —
       покупки, countIf(is_first_purchase) — первые покупки.
     columns:
@@ -350,6 +350,8 @@ models:
         description: Возраст игрока на момент покупки (purchase_date - install_day).
       - name: lifetime_order
         description: Порядковый ключ бакета.
+      - name: product
+        description: Продукт (SKU) покупки без префикса lepta.games.ben. (adfree, chapter1, shoppacks.renewal2 …); '(unknown)' если пусто.
       - name: usd_amount
         description: Сумма покупки в USD.
       - name: purchase_cnt

@@ -4,13 +4,15 @@
       авторитетно usdAmount из monetization_transactions;
     - ДО неё — событийные purchase (petbuddy.events), сконвертированные в USD по
       int_currency_rates_usd (курс на дату покупки; для дат до начала курсов — ближайший
-      доступный курс валюты). Одна строка = одна покупка, ключ player_id (= profileId). -#}
+      доступный курс валюты). Одна строка = одна покупка, ключ player_id (= profileId).
+    product — SKU без префикса lepta.games.ben. (productId в mt / purchase_id в событиях). -#}
 
 with mt as (
     select
         JSONExtractString(data, 'profileId')                                        as player_id,
         toDate(parseDateTimeBestEffortOrNull(JSONExtractString(data, 'occurredAt'))) as purchase_date,
-        JSONExtractFloat(data, 'usdAmount')                                         as usd_amount
+        JSONExtractFloat(data, 'usdAmount')                                         as usd_amount,
+        JSONExtractString(data, 'productId')                                        as product_id
     from {{ source('raw', 'ben_monetization_transactions') }}
     where JSONExtractString(data, 'type') = 'IAP' and JSONExtractString(data, 'status') = 'RECORDED'
 ),
@@ -21,7 +23,8 @@ ev as (   -- покупки из событий ДО покрытия mt
         player_id,
         event_date as purchase_date,
         toFloat64OrNull(replaceAll(properties.revenue::String, ',', '.')) as amount,
-        nullIf(properties.currency::String, '')                          as currency
+        nullIf(properties.currency::String, '')                          as currency,
+        properties.purchase_id::String                                    as product_id
     from {{ source('petbuddy', 'events') }}
     where name = 'revenue' and properties.type::String = 'purchase'
       and event_date < (select d0 from mt_start)
@@ -40,12 +43,17 @@ ev_usd as (
     select
         e.player_id,
         e.purchase_date,
+        e.product_id,
         e.amount * coalesce(nullIf(rl.rate, 0.0), fr.rate0, if(e.currency = 'USD', 1.0, null)) as usd_amount
     from ev e
     left join rate_le rl on rl.id = e.id
     left join first_rate fr on fr.currency = e.currency
     where e.amount is not null
 )
-select player_id, purchase_date, usd_amount from mt     where usd_amount is not null
-union all
-select player_id, purchase_date, usd_amount from ev_usd where usd_amount is not null
+select player_id, purchase_date, usd_amount,
+       if(product_id = '', '(unknown)', replaceRegexpOne(product_id, '^lepta[.]games[.]ben[.]', '')) as product
+from (
+    select player_id, purchase_date, usd_amount, product_id from mt     where usd_amount is not null
+    union all
+    select player_id, purchase_date, usd_amount, product_id from ev_usd where usd_amount is not null
+)

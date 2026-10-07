@@ -5,11 +5,11 @@
 ) }}
 {#- Покупки (IAP) в USD на грейне транзакции. Источник — int_iap_usd (гибрид:
     monetization_transactions + конверсия старых событий по курсам). Питает Summary.USD,
-    Real Money Purchases (агрегатно — SKU в данных нет) и IAP by Player Lifetime.
+    Real Money Purchases, IAP by Player Lifetime и разрез по продукту (product).
     Атрибуты игрока (кампания/страна/версия/install) — из dim_players. -#}
 
 with iap as (
-    select player_id, assumeNotNull(purchase_date) as purchase_date, usd_amount
+    select player_id, assumeNotNull(purchase_date) as purchase_date, usd_amount, product
     from {{ ref('int_iap_usd') }}
     where usd_amount is not null and purchase_date is not null
 ),
@@ -41,6 +41,7 @@ select
     p.install_date,
     {{ lifetime_bucket('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_bucket,
     {{ lifetime_order('greatest(0, dateDiff(\'day\', p.install_day, i.purchase_date))') }} as lifetime_order,
+    i.product                                              as product,
     i.usd_amount,
     1                                                      as purchase_cnt,
     (i.purchase_date = f.first_purchase_date)              as is_first_purchase
