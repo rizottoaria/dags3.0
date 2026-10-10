@@ -1,0 +1,141 @@
+version: 2
+
+models:
+  # ---------------------------------------------------------------------------
+  - name: fct_level_events
+    description: >
+      События прохождения уровней (глав): level_start / level_complete / level_fail с номером
+      главы, версией, страной и устройством. Отдельных событий level_* игра не шлёт:
+      level_start = story_start; level_complete = chapter_fight_summary IsWin=True (версии
+      >= 1.0.28) или chapter_finish (версии < 1.0.28); level_fail = chapter_fight_summary
+      IsWin=False (только >= 1.0.28, раньше поражения не логировались — has_fail_tracking).
+      Версии >= 1.0.22, isTest-события исключены. Устройство (бренд/модель/ОС) — снимок
+      аккаунта ben.User.deviceInfo на последний вход, не на момент события; заполнено
+      примерно с августа 2026 (покрытие игроков 83–98%), раньше '(unknown)'.
+    columns:
+      - name: event_id
+        description: ID исходного события.
+        tests: [unique, not_null]
+      - name: event_at
+        description: Время события.
+      - name: event_date
+        description: День события.
+      - name: event_type
+        description: level_start / level_complete / level_fail.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['level_start', 'level_complete', 'level_fail']
+      - name: source_event
+        description: Исходное событие игры (story_start / chapter_fight_summary / chapter_finish).
+      - name: player_id
+        description: Игрок.
+      - name: chapter
+        description: Номер главы (уровня).
+      - name: chapter_key
+        description: chapter без NULL (-1) — служебный ключ сортировки.
+      - name: is_star_mode
+        description: Звёздный режим главы (повторное прохождение на звёзды).
+      - name: run_id
+        description: ID забега по главе (есть у chapter_fight_summary, >= 1.0.28).
+      - name: chapter_run_number
+        description: Номер попытки этой главы игроком.
+      - name: all_chapter_tries
+        description: Всего попыток глав у игрока на момент события.
+      - name: battles_count
+        description: Боёв в забеге (complete/fail из summary).
+      - name: avg_rounds
+        description: Среднее раундов на бой в забеге.
+      - name: avg_hp_percent
+        description: Средний остаток HP игрока в забеге, %.
+      - name: energy_spend
+        description: Потрачено энергии на старт главы (story_start).
+      - name: player_power
+        description: Сила игрока (есть только у chapter_finish, версии < 1.0.28).
+      - name: has_fail_tracking
+        description: Версия клиента логирует поражения (>= 1.0.28). Fail rate считать только при true.
+      - name: days_since_registration
+        description: Дней с регистрации на момент события.
+      - name: lifetime_bucket
+        description: Бакет возраста игрока (D00, D01-03, D04-07, D08-14, D15-30, D31+).
+      - name: lifetime_order
+        description: Порядок бакета для сортировки.
+      - name: app_version
+        description: Версия клиента в событии.
+      - name: ab_version
+        description: A/B-группа.
+      - name: country
+        description: Страна из события (иначе страна установки, иначе '(unknown)').
+      - name: locale
+        description: Локаль устройства.
+      - name: platform
+        description: Платформа аккаунта (ben.User.platform, напр. google).
+      - name: device_brand
+        description: Бренд устройства (первое слово deviceInfo.model, напр. samsung, Google, INFINIX).
+      - name: device_model
+        description: Модель устройства (deviceInfo.model).
+      - name: os_name
+        description: ОС (Android / iOS).
+      - name: os_version
+        description: Версия ОС (напр. 16).
+      - name: os_api_level
+        description: Android API level (напр. 36).
+      - name: is_test_profile
+        description: Тестовый профиль (ben.PlayerProfile.isTest).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_level_funnel_daily
+    description: >
+      Дневная воронка прохождения уровней (глав): день x глава x режим x версия x страна x
+      платформа/ОС/бренд устройства x бакет возраста. Старты, прохождения, провалы, брошенные
+      попытки, уникальные игроки, complete/fail rate. Тестовые профили исключены.
+      Уникальные игроки между строками не суммируются.
+    columns:
+      - name: event_date
+        description: День.
+        tests: [not_null]
+      - name: chapter
+        description: Номер главы.
+      - name: chapter_key
+        description: chapter без NULL (-1).
+      - name: is_star_mode
+        description: Звёздный режим.
+      - name: app_version
+        description: Версия клиента.
+      - name: has_fail_tracking
+        description: Версия логирует поражения (>= 1.0.28).
+      - name: country
+        description: Страна.
+      - name: platform
+        description: Платформа аккаунта.
+      - name: os_name
+        description: ОС.
+      - name: device_brand
+        description: Бренд устройства.
+      - name: lifetime_bucket
+        description: Бакет возраста игрока.
+      - name: lifetime_order
+        description: Порядок бакета.
+      - name: starts
+        description: Стартов главы (level_start).
+      - name: completes
+        description: Прохождений (level_complete).
+      - name: fails
+        description: Провалов (level_fail, только при has_fail_tracking).
+      - name: abandons
+        description: Стартов без исхода (вышел/закрыл игру) = starts - completes - fails; только при has_fail_tracking.
+      - name: start_players
+        description: Уникальных игроков со стартом.
+      - name: complete_players
+        description: Уникальных игроков с прохождением.
+      - name: fail_players
+        description: Уникальных игроков с провалом.
+      - name: complete_rate
+        description: completes / starts.
+      - name: fail_rate
+        description: fails / (completes + fails); только при has_fail_tracking.
+      - name: avg_battles
+        description: Среднее боёв в забеге (по complete/fail).
+      - name: avg_hp_percent_on_fail
+        description: Средний остаток HP при провале.

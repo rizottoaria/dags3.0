@@ -25,7 +25,11 @@ usr as (
         nullIf(JSONExtractString(data, 'platform'), '')      as platform,
         nullIf(JSONExtractString(data, 'firstVersion'), '')  as first_version,
         parseDateTimeBestEffortOrNull(
-            JSONExtractString(data, 'createdAt'))            as user_created_at
+            JSONExtractString(data, 'createdAt'))            as user_created_at,
+        -- deviceInfo = {"model": "samsung SM-S928B", "os": "Android OS 16 / API-36 (...)"};
+        -- снимок последнего входа аккаунта (не на момент события), заполнен с ~августа 2026
+        nullIf(JSONExtractString(JSONExtractString(data, 'deviceInfo'), 'model'), '') as device_model,
+        nullIf(JSONExtractString(JSONExtractString(data, 'deviceInfo'), 'os'), '')    as device_os
     from {{ source('raw', 'ben_user') }}
 )
 
@@ -40,6 +44,12 @@ select
     u.install_country,
     u.platform,
     u.first_version,
-    toDate(u.user_created_at) as install_date
+    toDate(u.user_created_at) as install_date,
+    u.device_model,
+    nullIf(splitByChar(' ', ifNull(u.device_model, ''))[1], '')          as device_brand,
+    u.device_os,
+    nullIf(extract(ifNull(u.device_os, ''), '^([A-Za-z]+)'), '')          as os_name,
+    nullIf(extract(ifNull(u.device_os, ''), '([0-9]+(?:[.][0-9]+)*)'), '') as os_version,
+    toInt32OrNull(extract(ifNull(u.device_os, ''), 'API-([0-9]+)'))      as os_api_level
 from pp
 left join usr u using (user_id)

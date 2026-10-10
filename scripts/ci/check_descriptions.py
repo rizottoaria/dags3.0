@@ -28,6 +28,7 @@ MODELS_ROOT = "dbt/petbuddy/models"
 REQUIRED_GLOBS = [
     "marts/finance/mart_*.sql",
     "marts/clans/*.sql",
+    "marts/progression/*.sql",
 ]
 
 
