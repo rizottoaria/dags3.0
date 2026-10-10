@@ -33,6 +33,8 @@ models:
         +tags: ["core"]
       finance:
         +tags: ["finance"]
+      clans:
+        +tags: ["clans"]
 
 # Seed-таблицы (версионируемые CSV).
 seeds:

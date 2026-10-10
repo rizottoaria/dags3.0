@@ -1,0 +1,282 @@
+version: 2
+
+models:
+  # ---------------------------------------------------------------------------
+  - name: dim_clans
+    description: >
+      Текущее состояние клана, одна строка на клан. Источник — клановые события
+      (clan_creation/join/kick/role_change/lvl_up/raid_fight, с 02.10.2026, тестовые
+      isTest отброшены). Явного события «вышел сам» нет: уход = кик или переход в другой клан.
+      Server error игра пока не логирует — tech_issue_* это эвристики по данным боя.
+    columns:
+      - name: clan_id
+        description: ID клана (properties.clanId).
+        tests: [unique, not_null]
+      - name: clan_name
+        description: Название клана из clan_creation (null, если создание не попало в лог).
+      - name: creator_id
+        description: player_id создателя клана.
+      - name: created_at
+        description: Время создания клана.
+      - name: first_event_at
+        description: Первое клановое событие клана.
+      - name: last_event_at
+        description: Последнее клановое событие клана.
+      - name: clan_age_days
+        description: Возраст клана в днях (от создания или первого события до сегодня).
+      - name: clan_level
+        description: Текущий уровень клана (макс. newLevel из clan_lvl_up, по умолчанию 1).
+      - name: last_level_up_at
+        description: Время последнего повышения уровня клана.
+      - name: leader_id
+        description: Текущий лидер (последняя роль LEADER среди текущих участников).
+      - name: members_current
+        description: Текущая численность клана (открытые периоды членства).
+      - name: members_peak
+        description: Пиковая численность на конец дня за всю историю клана.
+      - name: members_ever
+        description: Уникальных игроков, когда-либо состоявших в клане.
+      - name: joins_total
+        description: Всего вступлений (clan_join).
+      - name: kicks_total
+        description: Всего киков (clan_kick).
+      - name: switched_out_total
+        description: Ушли в другой клан (вступили/создали другой).
+      - name: active_members_7d
+        description: Текущие участники с активностью в игре за последние 7 дней.
+      - name: active_share_7d
+        description: active_members_7d / members_current.
+      - name: raid_fights_total
+        description: Всего рейдовых боёв участников за клан.
+      - name: raid_wins_total
+        description: Выигранных рейдовых боёв.
+      - name: raid_win_rate
+        description: raid_wins_total / raid_fights_total.
+      - name: raid_fighters_total
+        description: Уникальных игроков, участвовавших в рейдах клана.
+      - name: raid_fights_7d
+        description: Рейдовых боёв за последние 7 дней.
+      - name: max_tier_cleared
+        description: Максимальный пройденный тир рейдового босса (bossTier с победой).
+      - name: max_tier_cleared_at
+        description: Когда впервые пройден max_tier_cleared.
+      - name: last_raid_at
+        description: Время последнего рейдового боя.
+      - name: tech_issue_fights_total
+        description: Рейдовые бои с любым флагом технической аномалии (см. mart_clan_raid_fights).
+      - name: loss_full_hp_fights_total
+        description: Поражения при 100% HP (вероятный обрыв/выход посреди боя).
+      - name: tech_issue_rate
+        description: tech_issue_fights_total / raid_fights_total.
+      - name: is_test_creator
+        description: Создатель клана — тестовый профиль (dim_players.is_test_profile).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_clan_daily
+    description: >
+      Дневной прогресс клана: клан x день, уплотнено от первого события клана до сегодня.
+      Численность на конец дня, вступления/кики/переходы, активные участники, уровень,
+      рейды (бои, победы, участие, накопленный макс. тир), технические аномалии рейдов.
+    columns:
+      - name: clan_id
+        description: ID клана.
+        tests: [not_null]
+      - name: clan_name
+        description: Название клана.
+      - name: event_date
+        description: День.
+        tests: [not_null]
+      - name: joins
+        description: Вступлений за день.
+      - name: kicks
+        description: Киков за день.
+      - name: left_switched
+        description: Ушли за день в другой клан.
+      - name: role_changes
+        description: Смен ролей за день.
+      - name: members_eod
+        description: Численность на конец дня.
+      - name: active_members
+        description: Участники клана с любой активностью в игре в этот день.
+      - name: clan_level_eod
+        description: Уровень клана на конец дня (накопленный максимум).
+      - name: raid_fights
+        description: Рейдовых боёв за день.
+      - name: raid_wins
+        description: Побед в рейде за день.
+      - name: raid_fighters
+        description: Уникальных бойцов рейда за день.
+      - name: tiers_first_cleared
+        description: Сколько тиров босса клан впервые прошёл в этот день.
+      - name: max_tier_cleared_cum
+        description: Максимальный пройденный тир на конец дня (накопленно).
+      - name: tech_issue_fights
+        description: Рейдовых боёв с технической аномалией за день.
+      - name: loss_full_hp_fights
+        description: Поражений при 100% HP за день.
+      - name: active_share
+        description: active_members / members_eod.
+      - name: raid_participation
+        description: raid_fighters / members_eod.
+      - name: tech_issue_rate
+        description: tech_issue_fights / raid_fights.
+
+  # ---------------------------------------------------------------------------
+  - name: mart_clan_members
+    description: >
+      Периоды членства игрока в клане (ключ member_id + clan_id + joined_at). Начало —
+      clan_creation/clan_join; конец — кик или вступление/создание другого клана.
+      Роль и рейдовая статистика игрока внутри периода.
+    columns:
+      - name: clan_id
+        description: ID клана.
+        tests: [not_null]
+      - name: clan_name
+        description: Название клана.
+      - name: member_id
+        description: player_id участника.
+        tests: [not_null]
+      - name: joined_at
+        description: Начало периода членства.
+      - name: joined_date
+        description: День начала периода.
+      - name: join_method
+        description: creator (создал клан) или joinMethod из clan_join (auto и т.п.).
+      - name: is_creator
+        description: Период начат созданием клана.
+      - name: left_at
+        description: Конец периода (null — состоит сейчас).
+      - name: left_date
+        description: День конца периода.
+      - name: leave_reason
+        description: kicked / switched_clan / null (состоит).
+      - name: kicked_by
+        description: Кто кикнул (если leave_reason = kicked).
+      - name: is_current
+        description: Состоит в клане сейчас.
+      - name: days_in_clan
+        description: Длительность периода в днях (до now для текущих).
+      - name: role
+        description: Роль в периоде — последняя clan_role_change, иначе LEADER у создателя / MEMBER.
+      - name: role_changes
+        description: Смен роли за период.
+      - name: raid_fights
+        description: Рейдовых боёв игрока за клан в периоде.
+      - name: raid_wins
+        description: Побед в рейде в периоде.
+      - name: raid_win_rate
+        description: raid_wins / raid_fights.
+      - name: max_boss_tier_won
+        description: Максимальный тир босса, выигранный игроком в периоде.
+      - name: raid_days
+        description: Дней с рейдовыми боями в периоде.
+      - name: last_raid_at
+        description: Последний рейдовый бой в периоде.
+      - name: join_app_version
+        description: Версия клиента при вступлении.
+      - name: join_country
+        description: Страна при вступлении.
+      - name: is_test_profile
+        description: Тестовый профиль (dim_players).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_clan_raid_fights
+    description: >
+      Факт клановых рейдовых боёв (одна строка = clan_raid_fight) с флагами технических
+      аномалий. Отдельного события server error игра не шлёт — флаги эвристические:
+      поражение при 100% HP, расхождение HpPercent со Stats, битый payload, дубль
+      отправки (≤3 с), бой за клан вне членства. Контекст: session_end/pause ≤60 с после боя.
+    columns:
+      - name: event_id
+        description: ID события.
+        tests: [unique, not_null]
+      - name: event_at
+        description: Время боя (отчёт клиента).
+      - name: event_date
+        description: День боя.
+      - name: clan_id
+        description: ID клана.
+      - name: clan_name
+        description: Название клана.
+      - name: player_id
+        description: Боец.
+      - name: boss_tier
+        description: Тир рейдового босса.
+      - name: is_win
+        description: 1 — победа, 0 — поражение.
+      - name: hp_percent
+        description: Остаток HP игрока в % на конец боя.
+      - name: rounds
+        description: Раундов в бою.
+      - name: stats_current_hp
+        description: Stats.CURRENT_HP на конец боя.
+      - name: stats_max_hp
+        description: Stats.MAX_HP.
+      - name: app_version
+        description: Версия клиента.
+      - name: country
+        description: Страна.
+      - name: is_loss_full_hp
+        description: Поражение при 100% HP — вероятный обрыв/выход/таймаут посреди боя.
+      - name: is_hp_mismatch
+        description: HpPercent расходится с CURRENT_HP/MAX_HP больше чем на 1 п.п.
+      - name: is_bad_payload
+        description: Нет bossTier/HpPercent/IsWin или пустые Stats.
+      - name: is_duplicate
+        description: Повтор того же боя (игрок+клан+тир+исход) в пределах 3 секунд.
+      - name: is_not_member
+        description: Бой за клан, в котором игрок по событиям не состоит.
+      - name: has_tech_issue
+        description: Любой из флагов аномалий.
+      - name: tech_issue_type
+        description: Главный тип аномалии (bad_payload > duplicate > not_member > hp_mismatch > loss_full_hp).
+      - name: session_end_within_60s
+        description: session_end у игрока в течение 60 с после боя (контекст).
+      - name: pause_within_60s
+        description: pause у игрока в течение 60 с после боя (контекст).
+      - name: is_test_profile
+        description: Тестовый профиль (dim_players).
+
+  # ---------------------------------------------------------------------------
+  - name: mart_clan_raid_tiers
+    description: >
+      Прогресс клана по тирам рейдового босса: клан x bossTier. Попытки, победы, винрейт,
+      первая попытка/победа, часы и попытки до первой победы, технические аномалии.
+    columns:
+      - name: clan_id
+        description: ID клана.
+        tests: [not_null]
+      - name: clan_name
+        description: Название клана.
+      - name: boss_tier
+        description: Тир босса.
+      - name: attempts
+        description: Всего боёв на тире.
+      - name: wins
+        description: Побед.
+      - name: losses
+        description: Поражений.
+      - name: win_rate
+        description: wins / attempts.
+      - name: fighters
+        description: Уникальных бойцов на тире.
+      - name: winners
+        description: Уникальных победителей на тире.
+      - name: first_attempt_at
+        description: Первая попытка тира.
+      - name: first_win_at
+        description: Первая победа (null — не пройден).
+      - name: is_cleared
+        description: Тир пройден кланом.
+      - name: hours_to_first_win
+        description: Часов от первой попытки до первой победы.
+      - name: attempts_before_first_win
+        description: Попыток до первой победы (для непройденных — все попытки).
+      - name: avg_rounds
+        description: Среднее число раундов.
+      - name: avg_hp_percent_on_win
+        description: Средний остаток HP игрока при победе.
+      - name: tech_issue_fights
+        description: Боёв с технической аномалией.
+      - name: loss_full_hp_fights
+        description: Поражений при 100% HP.

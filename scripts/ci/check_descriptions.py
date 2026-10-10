@@ -27,6 +27,7 @@ MODELS_ROOT = "dbt/petbuddy/models"
 # Начинаем с витрин finance; расширяй список по мере документирования.
 REQUIRED_GLOBS = [
     "marts/finance/mart_*.sql",
+    "marts/clans/*.sql",
 ]
 
 
