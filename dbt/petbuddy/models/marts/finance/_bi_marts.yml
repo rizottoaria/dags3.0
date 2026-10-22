@@ -343,7 +343,7 @@ models:
       - name: marketing_campaign
         description: Рекламная кампания установки.
       - name: country
-        description: Страна (dim_players).
+        description: Страна, ISO-код (dim_players.country) — как в остальных BI-витринах.
       - name: app_version
         description: Версия приложения (dim_players).
       - name: lifetime_bucket
@@ -360,3 +360,28 @@ models:
         description: Константа 1 (одна покупка).
       - name: is_first_purchase
         description: true, если это первая покупка игрока (по дате).
+
+  - name: mart_bi_revenue
+    description: >
+      Выручка в USD по дням с разбивкой на источник (Ads = rewarded ads из mart_bi_ads,
+      IAP = покупки из mart_bi_iap). View; измерения как у остальных BI-витрин, чтобы
+      работали нативные фильтры. Питает график "Revenue by day — Ads vs IAP" (дашборд 16).
+    columns:
+      - name: event_date
+        description: Дата.
+      - name: revenue_source
+        description: Источник выручки — Ads или IAP.
+      - name: marketing_campaign
+        description: Рекламная кампания установки.
+      - name: country
+        description: Страна, ISO-код.
+      - name: app_version
+        description: Версия приложения.
+      - name: install_platform
+        description: Платформа установки.
+      - name: install_date
+        description: Дата установки.
+      - name: lifetime_bucket
+        description: Возраст игрока (D00 … D31+).
+      - name: revenue_usd
+        description: Выручка в USD.

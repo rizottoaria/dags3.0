@@ -23,7 +23,7 @@ pl as (
     select
         player_id,
         marketing_campaign,
-        ifNull(country_name, '(unknown)')                  as country,
+        ifNull(country, '(unknown)')                       as country,  -- ISO, как в событиях (ads/gems/activity)
         ifNull(app_version, '(unknown)')                   as app_version,
         ifNull(install_platform, '(unknown)')              as install_platform,
         install_date,

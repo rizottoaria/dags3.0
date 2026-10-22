@@ -30,7 +30,7 @@ select
     pd.event_date,
     pd.player_id,
     ifNull(dp.marketing_campaign, '(unknown)')                    as marketing_campaign,
-    ifNull(pd.country, ifNull(dp.country_name, '(unknown)'))      as country,
+    ifNull(pd.country, ifNull(dp.country, '(unknown)'))           as country,
     ifNull(pd.app_version, ifNull(dp.app_version, '(unknown)'))   as app_version,
     ifNull(dp.install_platform, '(unknown)')                      as install_platform,
     dp.install_date,
