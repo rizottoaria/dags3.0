@@ -221,30 +221,37 @@ def _slack_message(w: dict, mode: str) -> dict:
     if w["currency"] != "EUR":
         at = f" (rate as of {w['rate_eur_usd_at']:%Y-%m-%d %H:%M} UTC)" if w["rate_eur_usd_at"] else ""
         rate_lines.append(f"1 EUR = {w['rate_eur_usd']:.6g} USD{at}")
-    fields = [
+    rows = [
         ("Win date and time", f"{w['win_at']:%Y-%m-%d %H:%M:%S} UTC"),
-        ("Provider / game", f"{w['provider']} / {w['game']}"),
+        ("Provider", w["provider"]),
+        ("Game", w["game"]),
         ("Website", w["site"]),
-        ("Session ID" if mode == "session" else "Round ID",
-         f"`{w['session_id'] if mode == 'session' else w['round_id']}`"),
+    ]
+    if mode == "session":
+        rows += [("Session ID", w["session_id"]), (f"Round IDs ({w['rounds']})", _clip(w["round_ids"]))]
+    else:
+        rows.append(("Round ID", w["round_id"]))
+    rows += [
         ("Amount (original)", _fmt_money(w["amount"], w["currency"])),
-        ("Amount EUR / USD", f"{_fmt_money(w['amount_eur'], 'EUR')} / {_fmt_money(w['amount_usd'], 'USD')}"),
+        ("Amount EUR", _fmt_money(w["amount_eur"], "EUR")),
+        ("Amount USD", _fmt_money(w["amount_usd"], "USD")),
         ("Exchange rate / date", "\n".join(rate_lines)),
         ("Player ID", f"{w['player_id']}" + (f" ({w['player_public_id']})" if w["player_public_id"] else "")),
+        ("Threshold", thr),
+        ("Report to", w["report_to"]),
     ]
     scope = "session" if mode == "session" else "round"
     head = (f":rotating_light: *Big win ({scope}) — {w['provider']}*: {_fmt_money(w['amount_eur'], 'EUR')} "
             f"/ {_fmt_money(w['amount_usd'], 'USD')} > threshold {thr}")
+    cell = lambda s: {"type": "raw_text", "text": str(s)}  # noqa: E731
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn", "text": head}},
-        {"type": "section", "fields": [{"type": "mrkdwn", "text": f"*{k}*\n{v}"} for k, v in fields]},
+        {"type": "table", "column_settings": [{"is_wrapped": True}, {"is_wrapped": True}],
+         "rows": [[cell("Field"), cell("Value")]] + [[cell(k), cell(v)] for k, v in rows]},
+        {"type": "context", "elements": [{"type": "mrkdwn", "text":
+            f"Hold the payout until approval · win events: {w['win_events']} · "
+            f"rates: DWH FxRateHistory (check vs xe.com)"}]},
     ]
-    if mode == "session":
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": _clip(
-            f"*Round IDs ({w['rounds']})*\n{w['round_ids']}")}})
-    blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text":
-        f"Hold the payout until approval · report to {w['report_to']} · "
-        f"win events: {w['win_events']} · rates: DWH FxRateHistory (check vs xe.com)"}]})
     ref = f"session {w['session_id']}" if mode == "session" else f"round {w['round_id']}"
     return {"text": f"Big win {w['provider']} {_fmt_money(w['amount_eur'], 'EUR')} {ref}", "blocks": blocks}
 
@@ -373,6 +380,7 @@ def _check(mode: str, conf: dict) -> int:
 
     if dry_run:
         for w in big:
+            print("WIN", json.dumps(w, ensure_ascii=False, default=str))
             print(json.dumps(_slack_message(w, mode), ensure_ascii=False, default=str))
         return len(big)
 
