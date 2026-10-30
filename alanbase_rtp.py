@@ -9,7 +9,7 @@ rizottoaria__alanbase_rtp
   timezone UTC, currency USD). Ключ conversion_id; вложенные goal/offer/partner/... развёрнуты
   в колонки, полный ответ API лежит в raw (JSON-текст).
 - alanbase_rtp.daily_stats  — клики и конверсии по статусам за день
-  (/v1/admin/statistic/common, group_by=day, timezone Europe/Belgrade, currency USD). Ключ day.
+  (/v1/admin/statistic/common, group_by=day, timezone UTC, currency USD). Ключ day.
 - alanbase_rtp.daily_stats_by — то же в разрезе day × измерение (partner/offer/country/os/landing/sub1).
   API умеет только один group_by за запрос, поэтому по запросу на день × измерение;
   окно короче (BREAKDOWN_LOOKBACK_DAYS), ретро — через conf.since. Ключ (day, dim, dim_id).
@@ -35,7 +35,7 @@ CHUNK_DAYS = 30
 PER_PAGE = 1000
 CURRENCY = "USD"
 CONV_TZ = "UTC"
-DAILY_TZ = "Europe/Belgrade"
+DAILY_TZ = "UTC"  # как conversions и данные платформы (до 30.10.2026 был Europe/Belgrade)
 BREAKDOWN_DIMS = ("partner", "offer", "country", "os", "landing", "sub1")
 BREAKDOWN_LOOKBACK_DAYS = 7
 
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS {CH_DB}.daily_stats (
     _loaded_at         DateTime64(3, 'UTC') DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(_loaded_at)
 ORDER BY day
-COMMENT 'Alanbase rtpbetpartners: клики и конверсии по статусам за день (день по Europe/Belgrade, суммы USD). DAG rizottoaria__alanbase_rtp'
+COMMENT 'Alanbase rtpbetpartners: клики и конверсии по статусам за день (день по UTC, суммы USD). DAG rizottoaria__alanbase_rtp'
 """
 
 
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS {CH_DB}.daily_stats_by (
     _loaded_at         DateTime64(3, 'UTC') DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree(_loaded_at)
 ORDER BY (day, dim, dim_id)
-COMMENT 'Alanbase rtpbetpartners: клики и конверсии за день в разрезе dim (partner/offer/country/os/landing/sub1), день по Europe/Belgrade, USD. DAG rizottoaria__alanbase_rtp'
+COMMENT 'Alanbase rtpbetpartners: клики и конверсии за день в разрезе dim (partner/offer/country/os/landing/sub1), день по UTC, USD. DAG rizottoaria__alanbase_rtp'
 """
 
 
@@ -245,7 +245,7 @@ def alanbase_rtp():
         from zoneinfo import ZoneInfo
 
         start = _window_start(context["dag_run"].conf or {})
-        # «сегодня» для дневной статистики — по Белграду (опережает UTC)
+        # «сегодня» для дневной статистики — в поясе DAILY_TZ
         end = datetime.now(ZoneInfo(DAILY_TZ)).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
         rows = []
         cur = start
