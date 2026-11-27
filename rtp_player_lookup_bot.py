@@ -19,7 +19,8 @@ DAG запускается каждые 5 мин (max_active_runs=1 — один
 
 Креды/настройки (Airflow Variables на 185, не в гите):
 - RTP_PROMO_BOT_TOKEN — токен бота @rtppromobot (обязательно; без него прогон skipped);
-- RTP_PROMO_BOT_ALLOWED_CHATS — необязательно: chat_id через запятую, кому бот отвечает.
+- RTP_PROMO_BOT_ALLOWED_CHATS — необязательно: chat_id и/или @username через запятую, кому бот
+  отвечает (username сверяется без учёта регистра; при смене username доступ пропадёт — надёжнее chat_id).
   Пусто/нет переменной — отвечает всем. chat_id видно в логе таска и в ответе на /id.
 Служебная: RTP_PROMO_BOT_OFFSET — offset getUpdates (ведёт сам бот).
 """
@@ -176,7 +177,7 @@ def rtp_player_lookup_bot():
         token = Variable.get(TOKEN_VAR, default=None)
         if not token:
             raise AirflowSkipException(f"нет Variable {TOKEN_VAR}")
-        allowed = {x.strip() for x in (Variable.get(ALLOWED_VAR, default="") or "").split(",") if x.strip()}
+        allowed = {x.strip().lower() for x in (Variable.get(ALLOWED_VAR, default="") or "").split(",") if x.strip()}
         offset = int(Variable.get(OFFSET_VAR, default="0") or 0)
 
         deadline = time.monotonic() + RUN_SECONDS
@@ -206,7 +207,9 @@ def rtp_player_lookup_bot():
                 chat_id = str(msg["chat"]["id"])
                 who = msg.get("from", {}).get("username") or msg.get("from", {}).get("id")
                 print(f"msg chat={chat_id} from={who}: {msg['text'][:200]!r}")
-                if allowed and chat_id not in allowed and not msg["text"].startswith("/id"):
+                uname = "@" + str(msg.get("from", {}).get("username") or "").lower()
+                if allowed and chat_id not in allowed and uname not in allowed \
+                        and not msg["text"].startswith("/id"):
                     _send(token, chat_id, "Нет доступа. Ваш chat_id: <code>%s</code>" % chat_id)
                     continue
                 try:
