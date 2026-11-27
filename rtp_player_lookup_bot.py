@@ -41,7 +41,6 @@ TG_API = "https://api.telegram.org/bot{token}/{method}"
 RUN_SECONDS = 285            # выйти до следующего прогона (schedule 5 мин), сохранив offset
 LONGPOLL_TIMEOUT = 25
 MAX_IDS = 500                # защита от простыней
-TG_TEXT_LIMIT = 3900         # лимит Telegram 4096, с запасом на теги
 
 HELP = (
     "Пришлите player_id — один или несколько через запятую, пробел или любой другой знак.\n"
@@ -102,23 +101,27 @@ def _lookup(ids):
         conn.close()
 
 
-def _fmt_row(r):
-    reg = r["registered_at"]
-    reg = reg.strftime("%Y-%m-%d %H:%M:%S") if reg else "—"
-    return (f"<b>{r['player_id']}</b> | {html.escape(r['registration_promo_code'] or '—')} | "
-            f"{html.escape(r['nickname'] or '—')} | {reg}")
+MAX_COL = 16   # длинные промокоды/ники обрезаем «…», чтобы таблица влезала в экран телефона
+ROWS_PER_MSG = 40
 
 
-def _chunks(lines, limit=TG_TEXT_LIMIT):
-    buf, size = [], 0
-    for line in lines:
-        if buf and size + len(line) + 1 > limit:
-            yield "\n".join(buf)
-            buf, size = [], 0
-        buf.append(line)
-        size += len(line) + 1
-    if buf:
-        yield "\n".join(buf)
+def _cut(s, n=MAX_COL):
+    s = str(s) if s not in (None, "") else "—"
+    return s if len(s) <= n else s[:n - 1] + "…"
+
+
+def _table(rows):
+    """Моноширинная таблица с рамкой для <pre>: ID │ Промокод │ Ник │ Регистрация (UTC)."""
+    head = ["ID", "Промокод", "Ник", "Рег. (UTC)"]
+    body = [[str(r["player_id"]), _cut(r["registration_promo_code"]), _cut(r["nickname"]),
+             r["registered_at"].strftime("%d.%m.%y %H:%M") if r["registered_at"] else "—"] for r in rows]
+    w = [max(len(x[i]) for x in [head] + body) for i in range(len(head))]
+
+    def line(cells):
+        return "│".join(" " + (c.rjust(w[i]) if i == 0 else c.ljust(w[i])) + " " for i, c in enumerate(cells)).rstrip()
+
+    sep = "┼".join("─" * (x + 2) for x in w)
+    return "\n".join([line(head), sep] + [line(b) for b in body])
 
 
 def _handle(token, msg):
@@ -148,12 +151,16 @@ def _handle(token, msg):
 
     found = {r["player_id"] for r in rows}
     missing = [i for i in ids if i not in found]
-    lines = [f"Найдено {len(rows)} из {len(ids)}", "<i>player_id | promo | nickname | registered_at (UTC)</i>"]
-    lines += [_fmt_row(r) for r in rows]
-    if missing:
-        lines.append("Нет в Players: " + ", ".join(map(str, missing)))
-    for part in _chunks(lines):
-        _send(token, chat_id, part)
+    title = f"🎰 <b>Игроки RTP.bet</b> — найдено {len(rows)} из {len(ids)}"
+    parts = [rows[i:i + ROWS_PER_MSG] for i in range(0, len(rows), ROWS_PER_MSG)] or [[]]
+    for n, chunk in enumerate(parts):
+        msg_lines = [title] if n == 0 else []
+        if chunk:
+            msg_lines.append(f"<pre>{html.escape(_table(chunk))}</pre>")
+        if n == len(parts) - 1 and missing:
+            miss = ", ".join(map(str, missing))
+            msg_lines.append("⚠️ Не найдены: <code>" + html.escape(_cut(miss, 1500)) + "</code>")
+        _send(token, chat_id, "\n".join(msg_lines))
 
 
 @dag(
