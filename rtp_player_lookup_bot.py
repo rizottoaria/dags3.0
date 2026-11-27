@@ -101,27 +101,16 @@ def _lookup(ids):
         conn.close()
 
 
-MAX_COL = 16   # длинные промокоды/ники обрезаем «…», чтобы таблица влезала в экран телефона
-ROWS_PER_MSG = 40
+CARDS_PER_MSG = 25   # ~120 символов на карточку, лимит Telegram 4096
 
 
-def _cut(s, n=MAX_COL):
-    s = str(s) if s not in (None, "") else "—"
-    return s if len(s) <= n else s[:n - 1] + "…"
-
-
-def _table(rows):
-    """Моноширинная таблица с рамкой для <pre>: ID │ Промокод │ Ник │ Регистрация (UTC)."""
-    head = ["ID", "Промокод", "Ник", "Рег. (UTC)"]
-    body = [[str(r["player_id"]), _cut(r["registration_promo_code"]), _cut(r["nickname"]),
-             r["registered_at"].strftime("%d.%m.%y %H:%M") if r["registered_at"] else "—"] for r in rows]
-    w = [max(len(x[i]) for x in [head] + body) for i in range(len(head))]
-
-    def line(cells):
-        return "│".join(" " + (c.rjust(w[i]) if i == 0 else c.ljust(w[i])) + " " for i, c in enumerate(cells)).rstrip()
-
-    sep = "┼".join("─" * (x + 2) for x in w)
-    return "\n".join([line(head), sep] + [line(b) for b in body])
+def _card(r):
+    """Карточка игрока под узкий экран телефона (таблица в <pre> там ломается)."""
+    nick = html.escape(r["nickname"]) if r["nickname"] else "<i>без ника</i>"
+    promo = (f"<code>{html.escape(r['registration_promo_code'])}</code>" if r["registration_promo_code"]
+             else "<i>без промокода</i>")
+    reg = r["registered_at"].strftime("%d.%m.%Y %H:%M") + " UTC" if r["registered_at"] else "<i>нет даты</i>"
+    return f"👤 <b>{r['player_id']}</b> · {nick}\n🎟 {promo}\n📅 {reg}"
 
 
 def _handle(token, msg):
@@ -151,16 +140,17 @@ def _handle(token, msg):
 
     found = {r["player_id"] for r in rows}
     missing = [i for i in ids if i not in found]
-    title = f"🎰 <b>Игроки RTP.bet</b> — найдено {len(rows)} из {len(ids)}"
-    parts = [rows[i:i + ROWS_PER_MSG] for i in range(0, len(rows), ROWS_PER_MSG)] or [[]]
+    title = f"🔎 <b>Найдено {len(rows)} из {len(ids)}</b>"
+    parts = [rows[i:i + CARDS_PER_MSG] for i in range(0, len(rows), CARDS_PER_MSG)] or [[]]
     for n, chunk in enumerate(parts):
-        msg_lines = [title] if n == 0 else []
-        if chunk:
-            msg_lines.append(f"<pre>{html.escape(_table(chunk))}</pre>")
+        blocks = [title] if n == 0 else []
+        blocks += [_card(r) for r in chunk]
         if n == len(parts) - 1 and missing:
             miss = ", ".join(map(str, missing))
-            msg_lines.append("⚠️ Не найдены: <code>" + html.escape(_cut(miss, 1500)) + "</code>")
-        _send(token, chat_id, "\n".join(msg_lines))
+            if len(miss) > 1500:
+                miss = miss[:1499] + "…"
+            blocks.append("⚠️ Не найдены: <code>" + miss + "</code>")
+        _send(token, chat_id, "\n\n".join(blocks))
 
 
 @dag(
